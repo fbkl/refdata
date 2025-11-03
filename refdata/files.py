@@ -30,11 +30,11 @@ class TrialFile():
 def get_all_times(a_glob):
     set_of_times = []
     for file in a_glob:
-        #print(file)
+        logger.debug(file)
         aTF = TrialFile(file)
         if aTF.time:
             set_of_times.append(aTF.time)
-        #print(aTF.time)
+        logger.debug(aTF.time)
     #return set_of_times
     return sorted(list(set(set_of_times)))
 

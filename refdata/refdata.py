@@ -9,6 +9,9 @@ from importlib.metadata import version
 import os
 import traceback
 from . import graph_params
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def check_ver(package, ver_requirements):
     ver_requirements_list = ver_requirements.split('.')
@@ -30,7 +33,7 @@ def check_data(data_dir):
     for some_dir in dirs_to_check:
         if not os.path.exists(os.path.join(data_dir,some_dir)):
             raise Exception(f"source data {some_dir} not found. graph generation with references will fail")
-    print("data found okay!")
+    logger.info("data found okay!")
 
 check_data(os.path.join(os.path.dirname(__file__),"../data"))
 
@@ -44,9 +47,6 @@ from scipy.interpolate import PchipInterpolator
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 import os
 
-import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 ##Setting graphing parameters
 ROW_OF_FLOTS=15
@@ -183,7 +183,7 @@ class RefData:
 
     def get_curve_y(self, y_in, x, xnew, num_cycles,scale, inverted=False ):
         y   = np.tile(y_in,num_cycles+4)
-        #print(len(y))
+        logger.debug(len(y))
         fy =  interpolate.interp1d(x,y)
         ynew = fy(xnew)
         Y = ynew*scale
@@ -193,10 +193,10 @@ class RefData:
 
     def get_curve_x(self, ik_id_so_i, x_offset, num_cycles,scale ):
         x   = repeat_x(ik_id_so_i.x,num_cycles+4)
-        #print(x)
-        #print("lenx %d"%len(x))
+        logger.debug(x)
+        logger.debug("lenx %d"%len(x))
         xnew = np.arange(x_offset%360, 100*num_cycles+x_offset%360, 1)
-        #print(xnew)
+        logger.debug(xnew)
         X =(xnew-x_offset)*scale
         return X,x, xnew
 
@@ -206,7 +206,7 @@ class RefData:
         X_list = []
         Y_list = []
         for ik_id_so_i in self.reference_curve_dict[reference_name]:
-            print(ik_id_so_i)
+            logger.debug(ik_id_so_i)
             X,x, xnew = self.get_curve_x(ik_id_so_i, x_offset, num_cycles,scale[0] )
             Y = self.get_curve_y(ik_id_so_i.mean, x, xnew, num_cycles,scale[1], inverted=inverted)
             X_list.append(X)
@@ -220,13 +220,13 @@ class RefData:
         num_cycles: is an integer
 
         """
-        #print("plotting reference!")
+        logger.debug("plotting reference!")
         if not ax:
             fig = plt.figure()
             ax = plt.gca()
 
         if not self.reference_curve_dict:
-            print("reference curve dictionary not set!")
+            logger.warning("reference curve dictionary not set!")
             return
         #plt.figure()
         #plt.title(reference_name)
@@ -238,7 +238,7 @@ class RefData:
         #for ik_id_so_i in self.reference_curve_dict[reference_name]:
 
             X,x, xnew = self.get_curve_x(ik_id_so_i, x_offset, num_cycles,scale[0])
-            #print("leny %d"%len(ik_id_so_i.mean))
+            logger.debug("leny %d"%len(ik_id_so_i.mean))
             Y = self.get_curve_y(ik_id_so_i.mean, x, xnew, num_cycles,scale[1])
             YP = self.get_curve_y(ik_id_so_i.mean+ik_id_so_i.sd, x, xnew, num_cycles,scale[1])
             YM = self.get_curve_y(ik_id_so_i.mean-ik_id_so_i.sd, x, xnew, num_cycles,scale[1])
@@ -317,7 +317,7 @@ class GaitNormativeRefData(RefData):
                     ik_index = 0
                 if 'two' in col[0]:
                     ik_index = 1
-                #print(col, movement_name, ik_index)
+                logger.debug(col, movement_name, ik_index)
 
                 self.reference_curve_dict[friendly_movement_name][ik_index].name = col[0]    
 
@@ -325,7 +325,7 @@ class GaitNormativeRefData(RefData):
                 if col[1] == 'Average':
                     self.reference_curve_dict[friendly_movement_name][ik_index].mean = df[col][movement_name].values
                     self.reference_curve_dict[friendly_movement_name][ik_index].x = 100*np.array(df[col][movement_name].index)
-                    #print(self.reference_curve_dict[friendly_movement_name][ik_index].x)
+                    logger.debug(self.reference_curve_dict[friendly_movement_name][ik_index].x)
                 if col[1] == 'SD':
                     self.reference_curve_dict[friendly_movement_name][ik_index].sd = df[col][movement_name].values
                 
@@ -399,11 +399,11 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
             try:
             #for i_file, file in enumerate(action_trials):
                 this_action_name = ""
-                #print(i_file)
-                #print(skip_trials)
+                logger.debug(i_file)
+                logger.debug(skip_trials)
                 matching_actions = [action_name for action_name in include_actions if action_name in file]
                 if not matching_actions or i_file in skip_trials :
-                    print("skipping file: %s"%file)
+                    logger.warning("skipping file: %s"%file)
                     continue
                 elif len(matching_actions) >1:
                     raise ValueError("More than one action in the specified file name!")
@@ -427,7 +427,7 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
                         logger.error(f"Could not find {joint_or_muscle_name} in source data!")
                         continue ## I think...
                     if ref_name["plot_it"]:
-                        #print(joint_or_muscle_name_suffix)
+                        logger.debug(joint_or_muscle_name_suffix)
                         joint_or_muscle_complete_name = joint_or_muscle_name+joint_or_muscle_name_suffix[l_r]+curve_suffix
                         if not joint_or_muscle_complete_name in all_curves_for_this_person.keys():
                             all_curves_for_this_person.update({joint_or_muscle_complete_name:([],"","")})
@@ -435,20 +435,28 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
                         side = l_r
                         if "pelvis" in joint_or_muscle_complete_name or "lumbar" in joint_or_muscle_complete_name:
                             side = -1
-                            #print(xy_clippings_both[1])
+                            logger.debug(xy_clippings_both[1])
                         #    which_clippings = xy_clippings_both[1][file]
                         #else:
-                            #print(xy_clippings_both[l_r])
+                            logger.debug(xy_clippings_both[l_r])
                         #    which_clippings = xy_clippings_both[l_r][file]
+
+                        pelvic_tilt_flipper = 1 ## we need this because the pelvis ik is a special case,
+                        
+                        if "pelvis_tilt" in joint_or_muscle_complete_name:
+                            print("is pelvis tilt!")
+                            if l_r:
+                                print("flipping!")
+                                pelvic_tilt_flipper = -1
 
                         clipped_curves = clip_curve(
                                 data["time"],
-                                data[joint_or_muscle_complete_name]*ref_name["scale"][1]+ref_name["offset"],
+                                data[joint_or_muscle_complete_name]*ref_name["scale"][1]*pelvic_tilt_flipper+ref_name["offset"],
                                 time_clips = which_clippings )
 
                         corrected_clipped_curves = clipped_curves
                         if False and side == -1: ## this doesnt work for ID because we no longer have the IK information for the angle either, so I can't use it anyway
-                            print(joint_or_muscle_complete_name)
+                            logger.debug(joint_or_muscle_complete_name)
                             ##TODO: this will fail in other models that are not the 1992/2392/2354 etc
                             pelvis_rot_ref = conv_names["pelvis_rotation"]
                             clipped_pelvis_rotation = clip_curve(
@@ -474,7 +482,7 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
 
             except:
                 traceback.print_exc()
-                print("failed in %s"%i_file)
+                logger.warning("failed in %s"%i_file)
                 pass
     if all_curves_for_this_person == {}:
         logger.error("No curves generated! Check source data")
@@ -486,12 +494,12 @@ def generate_gait_plots(gait_trials,xy_clippings_both, **kwargs):
 def remove_repeated(handles, labels):
     nh = []
     nl = []
-    #print(labels)
+    logger.debug(labels)
     for h, l in zip(handles, labels):
         if not l in nl:
             nl.append(l)
             nh.append(h)
-    #print(nl)
+    logger.debug(nl)
     try:
         nh, nl = zip(*sorted(zip(nh, nl), key=lambda x: x[1]))
     except:
@@ -523,15 +531,15 @@ def actual_plot(X,Y,ax,side, plot_std, steps_label= "{}steps 1-{}",change_x_tick
         std_p = "darkgreen"
         std_m = "seagreen"
         mean_name = ""
-        #print("greeen")
+        logger.debug("greeen")
         #color_cycle = plt.cm.winter(np.linspace(0,1,len(Y)+2))
         color_cycle = plt.cm.Greens(np.linspace(cycle_begin,cycle_end,colorspace_range))
     else:
         raise Exception("side does not have a color defined!")
     
     if plot_std:
-        #print(mean_name)
-        #print("Mean{}".format(mean_name))
+        logger.debug(mean_name)
+        logger.debug("Mean{}".format(mean_name))
         ax.plot(X,Y.mean(axis=0), color = mean_color, label="{}Mean".format(mean_name))
         ax.plot(X,Y.mean(axis=0)+Y.std(axis=0), "-.", color = std_p, label="{}+1 SD".format(mean_name))
         ax.plot(X,Y.mean(axis=0)-Y.std(axis=0), "-.", color = std_m, label="{}-1 SD".format(mean_name))
@@ -564,7 +572,7 @@ def create_axs_dimensions(nrows, ncols, margin= 2, header = 2, subheigth = 8, su
 
     axarr = np.empty((nrows, ncols), dtype =object)
     
-    #print(height, width)
+    logger.debug(height, width)
 
     fig = plt.figure(figsize=(width, height)) #, facecolor = 'lightblue')
 
@@ -630,7 +638,7 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
                 for curve in curves[1]:
                     curves_combined.append((x, curve))
             
-            #print(ref_name)
+            logger.debug(ref_name)
             side_index = side
             if side == -1:
                 side_index = 2
@@ -798,7 +806,7 @@ class TrialData:
         #df = df[(df['closing_price'] >= 99) & (df['closing_price'] <= 101)]
         #data = data[(data["time"] >= time_start[i_file]) & (data["time"] <= time_end[i_file]+time_start[i_file])]
         self.data = self.data[(self.data["time"] >= start_time) & (self.data["time"] <= end_time+start_time)]
-        #print(data)
+        logger.debug(data)
 
         #remove time offset again because we changed where it starts
         self.data.time = self.data["time"] - np.min(self.data["time"])
@@ -815,7 +823,7 @@ def generate_somejoint_or_muscle_curves(some_action_trials, skip_trials, curve_p
     xy_joint_or_muscles = ({},{})
     for i_file, file in enumerate(some_action_trials):
         if i_file in skip_trials:
-            print("skipping file: %s"%file)
+            logger.warning("skipping file: %s"%file)
             continue
 
         this_trial = TrialData(file, remove_time_offset=use_absolute_times)
@@ -834,7 +842,7 @@ def generate_somejoint_or_muscle_curves(some_action_trials, skip_trials, curve_p
                     joint_or_muscle_complete_name = joint_or_muscle_name+joint_or_muscle_suffix + curve_suffix
 
                     logger.info(joint_or_muscle_complete_name)
-                    #print(joint_or_muscle_complete_name)
+                    logger.debug(joint_or_muscle_complete_name)
                     if joint_or_muscle_complete_name==f"{curve_prefix}_r{curve_suffix}":
                         y = data[joint_or_muscle_complete_name]*ref_name["scale"][1]
                         x = data["time"]
@@ -844,7 +852,7 @@ def generate_somejoint_or_muscle_curves(some_action_trials, skip_trials, curve_p
                         x = data["time"]
                         xy_joint_or_muscles[0].update({file:(x,y,[])})
                     elif joint_or_muscle_complete_name==curve_prefix+curve_suffix:
-                        print("FORCE PLATE?")
+                        logger.debug("FORCE PLATE?")
                         y = data[joint_or_muscle_complete_name]*ref_name["scale"][1]
                         x = data["time"]
                         xy_joint_or_muscles[left_or_right].update({file:(x,y,[])})
@@ -863,7 +871,7 @@ def clip_curve(time, curve_val, time_clips = [(0.1,1.13),(1.13,2.2),(2.2,3.26),(
         for i, x_i in enumerate(time):
             if x_i>x:
                 return i
-    #print(time_clips)
+    logger.debug(time_clips)
     if time_clips:
         step_range =len(time_clips)-1
     if use_frame_clips:
@@ -877,8 +885,8 @@ def clip_curve(time, curve_val, time_clips = [(0.1,1.13),(1.13,2.2),(2.2,3.26),(
             li = use_frame_clips[i][0]-add_frame_offset
             ui = use_frame_clips[i][1]-add_frame_offset
 
-        #print(li)
-        #print(time.values[li])
+        logger.debug(li)
+        logger.debug(time.values[li])
 
         xi = time[li:ui] #- time.values[li]
         yi = curve_val[li:ui]
@@ -943,7 +951,7 @@ def reshape_curves(curves, PLOT_IT=False, lower_lim = None, upper_lim = None): #
         finding_upper = True
         upper_lim = -1e200
     for curve in curves:
-        #print(curve)
+        logger.debug(curve)
         if max_len < get_length(curve[0]):
             max_len = get_length(curve[0])
         if finding_lower and np.min(curve[0]) < lower_lim:
@@ -951,17 +959,17 @@ def reshape_curves(curves, PLOT_IT=False, lower_lim = None, upper_lim = None): #
         if finding_upper and np.max(curve[0])> upper_lim:
             upper_lim = np.max(curve[0])
     #max len
-    #print(max_len)
+    logger.debug(max_len)
     xi = np.linspace(lower_lim,upper_lim, num=max_len)
     for curve in curves:
         try:
             fy =  interpolate.interp1d(curve[0],curve[1])
             new_curves.append(fy(xi))
         except:
-            print(len(curve[0]))
-            print(len(curve[1]))
-            print(curve[0])
-            print(curve[1])
+            logger.warning(len(curve[0]))
+            logger.warning(len(curve[1]))
+            logger.warning(curve[0])
+            logger.warning(curve[1])
             raise()
 
     if PLOT_IT:
@@ -997,7 +1005,7 @@ def get_length(something):
         return len(something)
     if isinstance(something,np.ndarray):
         return something.size
-    print(something)
+    logger.debug(something)
     raise("wtf!!!!!!!!!!!!!")
 
 #print(get_length([1,2,3,4]))
@@ -1032,7 +1040,7 @@ def creat_axs(cccc, ref= IdGaitData()):
         some_ax.name = name
         some_ax.reference = ref
         some_ax.update()
-        #print(ref_name)
+        logger.debug(ref_name)
         axcurve_list_.append(some_ax)
     return axcurve_list_
         
@@ -1090,24 +1098,24 @@ def find_steps(x, grf,weight):
     rising = False
     this_step = [None,None]
     for t, y in zip(x,grf):
-        #print((y, threshold))
+        logger.debug((y, threshold))
         if not step and y>threshold:
-            #print(t)
+            logger.debug(t)
             rising = True
             step_start= np.min([t,step_start])
             if t-step_start > min_duration:
                 step = True
-                #print("is step")
+                logger.debug("is step")
                 this_step[0] = step_start
         if rising and y<threshold:
             rising = False
             step_start = 1e200
         if step and y<threshold:
-            #print("trying to find lowering edge, %f, %f"%(t,step_stop))
+            logger.debug("trying to find lowering edge, %f, %f"%(t,step_stop))
             lowering = True
             step_stop = np.min([t,step_stop])
             if t-step_stop > min_duration:
-                #print("found lowering %s"%step_stop)
+                logger.debug("found lowering %s"%step_stop)
                 step = False
                 this_step[1] = step_stop
                 step_seq.append(this_step)
@@ -1172,7 +1180,7 @@ def each_side_plot(grf_, zero_time, grf_name_prefix = "1_ground_", side="Left", 
 
     st_seg = construct_step_segmentation_vector(steps_vec)
     
-    #print(st_seg)
+    logger.debug(st_seg)
     all_handles = []
     all_labels = []
     
@@ -1268,7 +1276,7 @@ class GRFWalkingRefData(RefData):
         self.set_myself(compress=compress)
 
     def set_myself(self, compress =60):
-        print("assuming stance phase is %f  of the total step duration"%compress)
+        logger.info("assuming stance phase is %f  of the total step duration"%compress)
         module_dir = os.path.dirname(os.path.abspath(__file__))
 
         #A = GRFSET('GRF_F_V_PRO_left.csv')
@@ -1285,12 +1293,12 @@ class GRFWalkingRefData(RefData):
         for axis, movement_direction in zip(["x","y","z"], ["AP","V","ML"]):
             self.reference_curve_dict.update({"the_ground_force_v%s"%axis:[RefDataPrimitive(),RefDataPrimitive()]})
             for i, side in enumerate(["left", "right"]):
-                #print(i)
+                logger.debug(i)
                 ## TODO: we cant have a lib that needs to calculate the std and mean deviations each time, this doesnt change it carrying the dataset around requires like 1gb!
                 set_name = os.path.join(module_dir,"..","data","grf_data", "GRF_F_%s_PRO_%s.csv"%(movement_direction,side))
                 this_set = GRFSET(set_name)
-                #print(set_name)
-                #print(this_set.set_mean)
+                logger.debug(set_name)
+                logger.debug(this_set.set_mean)
                 
                 self.reference_curve_dict["the_ground_force_v%s"%axis][i].name = "%s Force %s"%(movement_direction, side)
                 self.reference_curve_dict["the_ground_force_v%s"%axis][i].mean = extend_y(this_set.set_mean,compress)
@@ -1330,9 +1338,9 @@ from sklearn.metrics import root_mean_squared_error
 def rmse(graphs, PLOT_IT=False):
     def from_x_yyy_to_xy_xy_xy(x,y):
         a = []
-        #print(x)
-        #print("mulllll")
-        #print(y.shape)
+        logger.debug(x)
+        logger.debug("mulllll")
+        logger.debug(y.shape)
         #return
         for i in range(y.shape[0]):
             X = x
@@ -1344,20 +1352,20 @@ def rmse(graphs, PLOT_IT=False):
 
     def pick_measured_curves(axc):
         for k in axc.curves_dic.keys():
-            #print(k)
+            logger.debug(k)
             pass
         #axc.curves_dic[k][0] # curves, this has the length of the number of trials, and the then each curve with their different x values
-        #print(len(axc.curves_dic[k][0]))
-        #print(axc.curves_dic[k][0][0])
+        logger.debug(len(axc.curves_dic[k][0]))
+        logger.debug(axc.curves_dic[k][0][0])
         #return
         #axc.curves_dic[k][1] # reference plotting parameters
-        #print(axc.curves_dic[k][1])
+        logger.debug(axc.curves_dic[k][1])
         #axc.curves_dic[k][2] # side, 0 = left, 1, right
         a = []
         for trial in axc.curves_dic[k][0]:
             a.extend(from_x_yyy_to_xy_xy_xy(trial[0],trial[1]))
-        #print(len(a))
-        #print(len(a[0]))
+        logger.debug(len(a))
+        logger.debug(len(a[0]))
         xi, yi =  reshape_curves(a)
         return xi,yi #, axc.curves_dic[k][1]['name']
 
@@ -1368,20 +1376,20 @@ def rmse(graphs, PLOT_IT=False):
     
     def pick_ref(axc):
         for k in axc.curves_dic.keys():
-            #print(k)
+            logger.debug(k)
             pass
-        #print(axc.curves_dic[k][1]['name'])
+        logger.debug(axc.curves_dic[k][1]['name'])
         this_my_ref = axc.reference.reference_curve_dict[axc.curves_dic[k][1]['name']]
         if len(this_my_ref) >1:
             raise("if you have multiple references you have to think about what you are doing")
         #return this_my_ref[0].x, this_my_ref[0].Y
         #a = []
-        #print(this_my_ref[0].Y.shape)
-        #print(this_my_ref[0].x.shape)
+        logger.debug(this_my_ref[0].Y.shape)
+        logger.debug(this_my_ref[0].x.shape)
         #for curve in range(this_my_ref[0].Y.shape[0]):
         #     a.extend((this_my_ref[0].x,a.append(this_my_ref[0].Y[curve,:])))
-        #print(this_my_ref[0].Y.shape)
-        #print(this_my_ref[0].x.shape)
+        logger.debug(this_my_ref[0].Y.shape)
+        logger.debug(this_my_ref[0].x.shape)
 
         return this_my_ref[0].x, this_my_ref[0].Y
     
@@ -1394,15 +1402,15 @@ def rmse(graphs, PLOT_IT=False):
     tf = {}
     
     for acx in graphs:
-        #print("KLFGERJWNLFGIKEJWRLGIKHWSERJKGKJDFGNSLKJJ,NDSKFJN")
+        logger.debug("KLFGERJWNLFGIKEJWRLGIKHWSERJKGKJDFGNSLKJJ,NDSKFJN")
         ISIK = False
         ISID = False
         ISSO = False
         for k in acx.curves_dic.keys():
-            #print(k)
+            logger.debug(k)
             pass
     
-        #print(k)
+        logger.debug(k)
         n = acx.curves_dic[k][1]['yaxis_name']
         if "Angle" in n:
             ISIK = True
@@ -1454,7 +1462,7 @@ def rmse(graphs, PLOT_IT=False):
             plt.plot(x,measured_curve_mean,label='measured')
             plt.plot(x,reference_curve_mean,label='reference')
             plt.legend()
-            print(real_name)
+            logger.debug(real_name)
             plt.show()
         str_ += f"{real_name: <{20}} & {root_mean_squared_error(measured_curve_mean,reference_curve_mean): <{20}} \\\\ \n"
         

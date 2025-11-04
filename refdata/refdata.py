@@ -142,7 +142,8 @@ class RefDataPrimitive:
         newx = np.linspace(0,100,nmaxX)
         newselfY = interpolate.pchip_interpolate(self.x , self._Y   , newx, axis=1)
         newnewY  = interpolate.pchip_interpolate(x      , y         , newx, axis=1)
-        logger.warning("now figure out if the concatenation is correct!")
+        ## it seems it is correct. moving to debug
+        logger.debug("now figure out if the concatenation is correct!")
         self.x = newx
         self._Y = np.concatenate((newselfY, newnewY), axis=0)
         assert(len(self.x) == self._Y.shape[1])
@@ -379,14 +380,27 @@ class SoData(RefData):
     def plot_reference_name(self,reference_name,scale=[1/99,1], num_cycles=1, avg_line=False, ax=None):
         pass
 
-def detect_pelvis_rotation(clipped_curve,pelvis_rotation):
+def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r):
+    #coming and going offset
+    offset = 90 ## or pi/2 ?
+    print(l_r)
+    side = 1
+    if l_r:
+        side= -1
     for i,(clip, pelv) in enumerate(zip (clipped_curve, pelvis_rotation)): 
 
         if pelv[1].mean() < 0:
         
             #but it doesnt correct the problem with the tilt!
             #pass
-            clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1])
+            #print("normal case")
+            clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] - side*offset)
+            ## i wont be seeing this
+            #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][0])
+        else:
+            #print("other_case!!!!!!!!!!!!!!!!!!")
+            clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] - offset *side)
+
     return clipped_curve
 
 
@@ -443,8 +457,8 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
 
                         pelvic_tilt_flipper = 1 ## we need this because the pelvis ik is a special case,
                         
-                        if "pelvis_tilt" in joint_or_muscle_complete_name:
-                            print("is pelvis tilt!")
+                        if "pelvis_tilt"  in joint_or_muscle_complete_name or "pelvis_rotation" in joint_or_muscle_complete_name:
+                            #print("is pelvis tilt!")
                             if l_r:
                                 print("flipping!")
                                 pelvic_tilt_flipper = -1
@@ -455,7 +469,9 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
                                 time_clips = which_clippings )
 
                         corrected_clipped_curves = clipped_curves
-                        if False and side == -1: ## this doesnt work for ID because we no longer have the IK information for the angle either, so I can't use it anyway
+                        if "pelvis_rotation" in joint_or_muscle_complete_name: ## this doesnt work for ID because we no longer have the IK information for the angle either, so I can't use it anyway
+
+                            logger.warning("ATTENTION: ASSUMING THAT I AM IK DATA AND ATTEMPTING FLIPS!")
                             logger.debug(joint_or_muscle_complete_name)
                             ##TODO: this will fail in other models that are not the 1992/2392/2354 etc
                             pelvis_rot_ref = conv_names["pelvis_rotation"]
@@ -464,9 +480,10 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
                                 data["pelvis_rotation"]*pelvis_rot_ref["scale"][1]+pelvis_rot_ref["offset"],
                                 time_clips = which_clippings )
 
-                            corrected_clipped_curves = detect_pelvis_rotation(clipped_curves, clipped_pelvis_rotation )
+                            corrected_clipped_curves = detect_pelvis_rotation(clipped_curves, clipped_pelvis_rotation,l_r)
 
-
+                        
+                        
                         xi,  curves = reshape_curves(normalize_steps(corrected_clipped_curves))
 
                         list_of_curves = all_curves_for_this_person[joint_or_muscle_complete_name][0]
@@ -572,7 +589,7 @@ def create_axs_dimensions(nrows, ncols, margin= 2, header = 2, subheigth = 8, su
 
     axarr = np.empty((nrows, ncols), dtype =object)
     
-    logger.debug(height, width)
+    logger.debug(f"height: {height}, width: {width}")
 
     fig = plt.figure(figsize=(width, height)) #, facecolor = 'lightblue')
 
@@ -585,7 +602,7 @@ def create_axs_dimensions(nrows, ncols, margin= 2, header = 2, subheigth = 8, su
 
     return fig, axarr
 
-def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=True, ref=GaitIKRefData(), subplot_grid=(ROW_OF_FLOTS+1,3), steps_label="{}steps 1-{}", legend=True, axs=None, fig=None, use_color_cycle=True, subject_identifier="Some_Subject_Or_Group_of_Subjects_Please_Change",curve_suffix=""):
+def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=True, ref=GaitIKRefData(), subplot_grid=(ROW_OF_FLOTS+1,3), steps_label="{}steps 1-{}", legend=True, axs=None, fig=None, use_color_cycle=True, subject_identifier="Some_Subject_Or_Group_of_Subjects_Please_Change",curve_suffix="",replace_conv_names=None):
     if ref is None:
         plot_ref_curves = False
         logger.warning("No reference curves defined, can't plot them")
@@ -709,6 +726,16 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
                 if not ref:
                     logger.warning("I was asked to display references, but no reference defined!")
                 else:
+                    ## this is backwards, i want to get the updated axis labels from the reference
+                    if replace_conv_names:
+                        #print(ref_name["name"])
+                        #print(ref_name)
+                        ##it should be a warning, but i guess you wouldnt do this by accident
+                        logger.debug("replacing graph parameters from saved and using the values from replace_conv_names provided")
+                        for repl_name , repl_vals in replace_conv_names.items():
+                            if repl_vals["name"] == ref_name["name"]:
+                                ref_name = repl_vals
+                    ## and when i update i can plot it
                     ref.plot_reference_name(ref_name["name"], scale=[1/99,ref_name["scale"][0]], 
                         num_cycles=1, avg_line=False, ax=ax)
             try:
@@ -954,10 +981,18 @@ def reshape_curves(curves, PLOT_IT=False, lower_lim = None, upper_lim = None): #
         logger.debug(curve)
         if max_len < get_length(curve[0]):
             max_len = get_length(curve[0])
-        if finding_lower and np.min(curve[0]) < lower_lim:
-            lower_lim = np.min(curve[0])
-        if finding_upper and np.max(curve[0])> upper_lim:
-            upper_lim = np.max(curve[0])
+        try:
+            if finding_lower and np.min(curve[0]) < lower_lim:
+                lower_lim = np.min(curve[0])
+        except:
+            logger.error(curve)
+            lower_lim = np.min(curve) #in case i have only 1 curve
+        try:
+            if finding_upper and np.max(curve[0])> upper_lim:
+                upper_lim = np.max(curve[0])
+        except:
+            logger.error(curve)            
+            upper_lim = np.max(curve)
     #max len
     logger.debug(max_len)
     xi = np.linspace(lower_lim,upper_lim, num=max_len)
@@ -983,6 +1018,11 @@ def reshape_curves(curves, PLOT_IT=False, lower_lim = None, upper_lim = None): #
 #print(a[0])
 
 def normalize_steps(steps_, PLOT_IT=False):
+    #print("here")
+    #logger.info(steps_)
+    if len(steps_) == 0:
+        traceback.print_exc()
+        logger.error("you didnt give me any data to normalize!!!!!")
     ## all steps will last 1.
     normalized_steps = []
     if steps_:
@@ -1047,20 +1087,22 @@ def creat_axs(cccc, ref= IdGaitData()):
 #axcurve_list = creat_axs(all_curves_for_this_person)
 
 
-def plotAX(some_Axs, ax, fig, plot_std=True, plot_ref_curves=False, legend=False):
+def plotAX(some_Axs, ax, fig, plot_std=True, plot_ref_curves=False, legend=False, **kwargs):
     
     allnh = []
     allnl = []
+    allZ = []
     for axi in ax.flatten():
         axi.set_axis_off()
     for an_Ax in some_Axs:
-        _,_,nh,nl,_ = plot_std_plots(an_Ax.curves_dic, axs=ax, fig=fig, ref= an_Ax.reference, legend= False, plot_std=plot_std, plot_ref_curves=plot_ref_curves)
+        _,_,nh,nl,Z = plot_std_plots(an_Ax.curves_dic, axs=ax, fig=fig, ref= an_Ax.reference, legend= False, plot_std=plot_std, plot_ref_curves=plot_ref_curves, **kwargs)
         allnh.extend(nh)
         allnl.extend(nl)
+        allZ.extend(Z)
     allnh, allnl = remove_repeated(allnh, allnl) 
     if legend:
         fig.legend(allnh, allnl,loc='lower right', bbox_to_anchor=(0.85, 0.18))
-    return fig, ax, allnh, allnl
+    return fig, ax, allnh, allnl, allZ
        
 
        
@@ -1402,7 +1444,7 @@ def rmse(graphs, PLOT_IT=False):
     tf = {}
     
     for acx in graphs:
-        logger.debug("KLFGERJWNLFGIKEJWRLGIKHWSERJKGKJDFGNSLKJJ,NDSKFJN")
+        logger.debug("Going over graphs while trying to calculate RMSE")
         ISIK = False
         ISID = False
         ISSO = False
@@ -1411,16 +1453,21 @@ def rmse(graphs, PLOT_IT=False):
             pass
     
         logger.debug(k)
+        eends = ""
         n = acx.curves_dic[k][1]['yaxis_name']
         if "Angle" in n:
             ISIK = True
             eends = "_ik"
-        if "Torque" in n:
+        elif "Torque" in n:
             ISID = True
             eends = "_id"
-        if "Activation" in n:
+        elif "Activation" in n:
             ISSO = True
             eends = "_so"
+        else:
+            ## moved this to debug because all is well that ends well
+            logger.debug(f"eends: {eends}")
+            logger.debug(f"What? {n} doent have Angle Torque of Activation in its name, what should i do???")
             
         real_name = strip_ends(k)+eends
         bb = pick_ref(acx)

@@ -51,10 +51,11 @@ import os
 ##Setting graphing parameters
 ROW_OF_FLOTS=15
 
-def set_graph_params():
-    SMALL_SIZE = 12
-    MEDIUM_SIZE = 18
-    BIGGER_SIZE = 22
+def set_graph_params(
+    SMALL_SIZE = 12,
+    MEDIUM_SIZE = 18,
+    BIGGER_SIZE = 22,
+        ):
 
     matplotlib.rc('text', usetex = True)
     matplotlib.rc('font', **{'family' : "sans-serif"})
@@ -423,23 +424,23 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name)
             if average_rotation_angle_is_negative:
                 if l_r:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
-                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
+                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
                     defined = True
                 else:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
-                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
+                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
                     defined = True
             else:
                 if l_r:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
-                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
+                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
                     defined = True
                 else:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
-                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
+                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
                     defined = True
         elif pelvis_joint_name == "pelvis_rotation":

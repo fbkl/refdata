@@ -380,32 +380,107 @@ class SoData(RefData):
     def plot_reference_name(self,reference_name,scale=[1/99,1], num_cycles=1, avg_line=False, ax=None):
         pass
 
-def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r):
+def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name):
     #coming and going offset
     offset = 90 ## or pi/2 ?
-    print(l_r)
-    side = 1
-    if l_r:
-        side= -1
-    for i,(clip, pelv) in enumerate(zip (clipped_curve, pelvis_rotation)): 
+    #print(l_r)
+    #side = 1
+    #if l_r:
+    #    side= -1
 
-        if pelv[1].mean() < 0:
-        
-            #but it doesnt correct the problem with the tilt!
-            #pass
-            #print("normal case")
-            clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] - side*offset)
-            ## i wont be seeing this
-            #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][0])
-        else:
-            #print("other_case!!!!!!!!!!!!!!!!!!")
-            clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] - offset *side)
+    
+
+    for i,(clip, pelv) in enumerate(zip (clipped_curve, pelvis_rotation)): 
+        average_rotation_angle_is_negative = pelv[1].mean() < 0
+        zero_curve = (clipped_curve[i][0], clipped_curve[i][0]*np.nan)
+        defined = False
+        if pelvis_joint_name == "pelvis_tilt":
+            if average_rotation_angle_is_negative:
+                if l_r:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
+                    #print(clipped_curve[i][1])
+                    defined = True
+                else:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
+                    #print(clipped_curve[i][1])
+                    defined = True
+            else:
+                if l_r:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
+                    #print(clipped_curve[i][1])
+                    defined = True
+                else:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
+                    #print(clipped_curve[i][1])
+                    defined = True
+
+
+        elif pelvis_joint_name == "pelvis_list":
+            if average_rotation_angle_is_negative:
+                if l_r:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
+                    #print(clipped_curve[i][1])
+                    defined = True
+                else:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
+                    #print(clipped_curve[i][1])
+                    defined = True
+            else:
+                if l_r:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
+                    #print(clipped_curve[i][1])
+                    defined = True
+                else:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
+                    #print(clipped_curve[i][1])
+                    defined = True
+        elif pelvis_joint_name == "pelvis_rotation":
+            if average_rotation_angle_is_negative:
+                if l_r:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] + 90)
+                    #print(clipped_curve[i][1])
+                    defined = True
+                else:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] - 90)
+                    #print(clipped_curve[i][1])
+                    defined = True
+            else:
+                if l_r:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] - 90)
+                    #print(clipped_curve[i][1])
+                    defined = True
+                else:
+                    #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
+                    clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] + 90 )
+                    #print(clipped_curve[i][1])
+                    defined = True
+        else: 
+            print(f"WTF!!!")
+        if not defined:
+            print("not defined!")
+            if average_rotation_angle_is_negative:
+                print("normal case")
+            else:
+                print("other case!")
+            print(f"{average_rotation_angle_is_negative}, {l_r}, {pelvis_joint_name}")
+            clipped_curve[i] = zero_curve
 
     return clipped_curve
 
 
 def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref=GaitIKRefData(),
-        conv_names=None, include_actions=[], action=None, curve_suffix="", use_absolute_times=False):
+        conv_names=None, include_actions=[], action=None, curve_suffix="", use_absolute_times=False, butchered_clipping=[]):
     all_curves_for_this_person = {}
 
     for l_r, clips in enumerate(xy_clippings_both):
@@ -457,36 +532,36 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
 
                         pelvic_tilt_flipper = 1 ## we need this because the pelvis ik is a special case,
                         
-                        if "pelvis_tilt"  in joint_or_muscle_complete_name or "pelvis_rotation" in joint_or_muscle_complete_name:
-                            #print("is pelvis tilt!")
-                            if l_r:
-                                print("flipping!")
-                                pelvic_tilt_flipper = -1
 
                         clipped_curves = clip_curve(
                                 data["time"],
-                                data[joint_or_muscle_complete_name]*ref_name["scale"][1]*pelvic_tilt_flipper+ref_name["offset"],
+                                data[joint_or_muscle_complete_name]*ref_name["scale"][1]+ref_name["offset"],
                                 time_clips = which_clippings )
 
                         corrected_clipped_curves = clipped_curves
-                        if "pelvis_rotation" in joint_or_muscle_complete_name: ## this doesnt work for ID because we no longer have the IK information for the angle either, so I can't use it anyway
-
+                        if "pelvis"  in joint_or_muscle_complete_name:
                             logger.warning("ATTENTION: ASSUMING THAT I AM IK DATA AND ATTEMPTING FLIPS!")
                             logger.debug(joint_or_muscle_complete_name)
                             ##TODO: this will fail in other models that are not the 1992/2392/2354 etc
-                            pelvis_rot_ref = conv_names["pelvis_rotation"]
-                            clipped_pelvis_rotation = clip_curve(
+                            pelvis_rot_ref = conv_names["pelvis_rotation"] ## i want the signal without any changes here??
+                            clipped_pelvis_rotation_raw = clip_curve(
                                 data["time"],
-                                data["pelvis_rotation"]*pelvis_rot_ref["scale"][1]+pelvis_rot_ref["offset"],
+                                data["pelvis_rotation"],
                                 time_clips = which_clippings )
+                            corrected_clipped_curves = detect_pelvis_rotation(clipped_curves, clipped_pelvis_rotation_raw,l_r, joint_or_muscle_complete_name)
 
-                            corrected_clipped_curves = detect_pelvis_rotation(clipped_curves, clipped_pelvis_rotation,l_r)
 
                         
                         
                         xi,  curves = reshape_curves(normalize_steps(corrected_clipped_curves))
 
                         list_of_curves = all_curves_for_this_person[joint_or_muscle_complete_name][0]
+                        #import pickle
+                        #pickle.dump((xi,curves), open("/tmp/arg.p","wb"))
+
+                        if len(butchered_clipping) > 0 and len(butchered_clipping[l_r]) >= i_file and len(butchered_clipping[l_r][i_file]) >0:
+                            curves[butchered_clipping[l_r][i_file]] = np.roll(curves[butchered_clipping[l_r][i_file]], len(xi)//2,axis=1)
+
                         list_of_curves.append((xi,curves))
                         logger.debug(f"list of curves for {joint_or_muscle_name}: {list_of_curves}")
                         ##define side for plot:

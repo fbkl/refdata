@@ -216,7 +216,7 @@ class RefData:
 
         return X_list,Y_list
 
-    def plot_reference_name(self, reference_name, num_cycles=4,scale=[1,1], avg_line=True, inverted = False, ax = None, alpha_=0.9): 
+    def plot_reference_name(self, reference_name, num_cycles=4,scale=[1,1], avg_line=True, inverted = False, ax = None, alpha_=0.9, remove_initial_offset=False): 
         """
         reference_name: is the name of the reference reference_name to be plotted
         num_cycles: is an integer
@@ -234,6 +234,12 @@ class RefData:
         #plt.title(reference_name)
 
         x_offset = 0
+        suffix = ""
+        if remove_initial_offset:
+            suffix = "*"
+            print("TRIGGERED REMOVE INITIAL OFFSET IN REFDATA")
+        else:
+            print("DID NOT trigger remove initial offset in RefData!!!")
         #num_cycles = num_cycles_+4
         if reference_name in self.reference_curve_dict:
             ik_id_so_i = self.reference_curve_dict[reference_name][0]
@@ -244,25 +250,40 @@ class RefData:
             Y = self.get_curve_y(ik_id_so_i.mean, x, xnew, num_cycles,scale[1])
             YP = self.get_curve_y(ik_id_so_i.mean+ik_id_so_i.sd, x, xnew, num_cycles,scale[1])
             YM = self.get_curve_y(ik_id_so_i.mean-ik_id_so_i.sd, x, xnew, num_cycles,scale[1])
+            Y2P = self.get_curve_y(ik_id_so_i.mean+2*ik_id_so_i.sd, x, xnew, num_cycles,scale[1])
+            Y2M = self.get_curve_y(ik_id_so_i.mean-2*ik_id_so_i.sd, x, xnew, num_cycles,scale[1])
+            
+            if remove_initial_offset:
+                YP-=Y[0]
+                YM-=Y[0]
+                Y2P-=Y[0]
+                Y2M-=Y[0]
+                Y-=Y[0]
 
             if inverted:
-                Y = -Y
                 YP = -YP
                 YM = -YM
+                Y2P = -Y2P
+                Y2M = -Y2M
+                Y = -Y
 
             if avg_line:
-                ax.plot(X, Y, "-", label="{} mean".format(ik_id_so_i.name))
-            ax.fill_between(X,YP, YM, alpha=alpha_, label= "{} 1 std ".format(ik_id_so_i.name),  linewidth=1, color="gray")
-
+                ax.plot(X, Y, "-", label="{} mean".format(ik_id_so_i.name)+suffix)
             if self.plot_2_sd:
 
-                Y2P = self.get_curve_y(ik_id_so_i.mean+2*ik_id_so_i.sd, x, xnew, num_cycles,scale[1])
-                Y2M = self.get_curve_y(ik_id_so_i.mean-2*ik_id_so_i.sd, x, xnew, num_cycles,scale[1])
-                if inverted:
-                    Y2P = -Y2P
-                    Y2M = -Y2M
+                print("plotting 2sds!")
+                ax.fill_between(X,Y2P, Y2M, alpha=alpha_, label= "{} 2 std ".format(ik_id_so_i.name)+suffix,  linewidth=1, color="lightgray")
+                if avg_line:
+                    ax.plot(X, Y2P, "-", label="{} sd+2".format(ik_id_so_i.name)+suffix)
+                    ax.plot(X, Y2M, "-", label="{} sd-2".format(ik_id_so_i.name)+suffix)
+            else:
+                print("plotting 1sd!")
+                if avg_line:
+                    ax.plot(X, YP, "-", label="{} sd+1".format(ik_id_so_i.name)+suffix)
+                    ax.plot(X, YM, "-", label="{} sd-1".format(ik_id_so_i.name)+suffix)
+                ax.fill_between(X,YP, YM, alpha=alpha_, label= "{} 1 std ".format(ik_id_so_i.name)+suffix,  linewidth=1, color="gray")
 
-                ax.fill_between(X,Y2P, Y2M, alpha=alpha_, label= "{} 2 std ".format(ik_id_so_i.name),  linewidth=1, color="lightgray")
+
         else:
             logging.warn("I dont have the reference %s"%reference_name)
         #plt.legend()
@@ -378,7 +399,7 @@ class SoData(RefData):
     def __init__(self, action=""):
         RefData.__init__(self, action)
 
-    def plot_reference_name(self,reference_name,scale=[1/99,1], num_cycles=1, avg_line=False, ax=None):
+    def plot_reference_name(self,reference_name,scale=[1/99,1], num_cycles=1, avg_line=False, ax=None,**kwargs):
         pass
 
 def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name):
@@ -599,7 +620,7 @@ def remove_repeated(handles, labels):
         pass
     return nh, nl
 
-def actual_plot(X,Y,ax,side, plot_std, steps_label= "{}steps 1-{}",change_x_ticks=True, use_color_cycle=True):
+def actual_plot(X,Y,ax,side, plot_std, steps_label= "{}steps 1-{}",change_x_ticks=True, use_color_cycle=True, remove_initial_offset=False):
     colorspace_range = len(Y)
     cycle_begin = 1
     if use_color_cycle:
@@ -633,22 +654,34 @@ def actual_plot(X,Y,ax,side, plot_std, steps_label= "{}steps 1-{}",change_x_tick
     if plot_std:
         logger.debug(mean_name)
         logger.debug("Mean{}".format(mean_name))
-        ax.plot(X,Y.mean(axis=0), color = mean_color, label="{}Mean".format(mean_name))
-        ax.plot(X,Y.mean(axis=0)+Y.std(axis=0), "-.", color = std_p, label="{}+1 SD".format(mean_name))
-        ax.plot(X,Y.mean(axis=0)-Y.std(axis=0), "-.", color = std_m, label="{}-1 SD".format(mean_name))
+        y_mean = Y.mean(axis=0)
+        this_mean_label ="{}Mean".format(mean_name) 
+        if remove_initial_offset:
+            y_mean -= y_mean[0] 
+            this_mean_label ="{}Mean*".format(mean_name) 
+
+        ax.plot(X,y_mean, color = mean_color, label= this_mean_label)
+        ax.plot(X,y_mean+Y.std(axis=0), "-.", color = std_p, label="{}+1 SD".format(mean_name))
+        ax.plot(X,y_mean-Y.std(axis=0), "-.", color = std_m, label="{}-1 SD".format(mean_name))
     else:
         ax.set_prop_cycle('color',color_cycle)
         one_label = False
         n =  len(Y)
         my_alpha = np.min([(1./n+0.4),1.])
+        suffix_label = ""
+        if remove_initial_offset:
+            suffix_label = "*"
         for i, y in enumerate(Y):
             #ax.plot(X,y,label="step %d"%i)
+            this_y = y
+            if remove_initial_offset:
+                this_y -= y[0]
             if not one_label and i>=n/2:
                 #ax.plot(X,y,label="{}steps 1-{}".format(mean_name,n))
-                ax.plot(X,y,label=steps_label.format(mean_name,n),alpha=my_alpha)
+                ax.plot(X,this_y,label=steps_label.format(mean_name,n)+suffix_label,alpha=my_alpha)
                 one_label=True
             else:
-                ax.plot(X,y,alpha=my_alpha)
+                ax.plot(X,this_y,alpha=my_alpha)
     if change_x_ticks:
         ax.set_xticks([0,.20,.40,.60,.80,1.00],labels=[0,20,40,60,80,100])
 
@@ -678,7 +711,7 @@ def create_axs_dimensions(nrows, ncols, margin= 2, header = 2, subheigth = 8, su
 
     return fig, axarr
 
-def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=True, ref=GaitIKRefData(), subplot_grid=(ROW_OF_FLOTS+1,3), steps_label="{}steps 1-{}", legend=True, axs=None, fig=None, use_color_cycle=True, subject_identifier="Some_Subject_Or_Group_of_Subjects_Please_Change",curve_suffix="",replace_conv_names=None):
+def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=True, ref=GaitIKRefData(), subplot_grid=(ROW_OF_FLOTS+1,3), steps_label="{}steps 1-{}", legend=True, axs=None, fig=None, use_color_cycle=True, subject_identifier="Some_Subject_Or_Group_of_Subjects_Please_Change",curve_suffix="",replace_conv_names=None, remove_initial_offset=False):
     if ref is None:
         plot_ref_curves = False
         logger.warning("No reference curves defined, can't plot them")
@@ -813,7 +846,7 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
                                 ref_name = repl_vals
                     ## and when i update i can plot it
                     ref.plot_reference_name(ref_name["name"], scale=[1/99,ref_name["scale"][0]], 
-                        num_cycles=1, avg_line=False, ax=ax)
+                        num_cycles=1, avg_line=False, ax=ax, remove_initial_offset=remove_initial_offset)
             try:
                    ##Let's create a refdata instance for this guy, in case we want to use it in the future:
                 if side == 2 or side == -1:
@@ -827,7 +860,7 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
                     thisAsRef.Y = Y
                     createRefDic.update({ref_name["name"]:[thisAsRef]})
                 if not side == 2:
-                    actual_plot(X,Y,ax,side, plot_std, steps_label=steps_label,use_color_cycle=use_color_cycle)
+                    actual_plot(X,Y,ax,side, plot_std, steps_label=steps_label,use_color_cycle=use_color_cycle, remove_initial_offset=remove_initial_offset)
             except BaseException as e:
                 logger.error(f"could not plot {name}, {ref_name['name']} {e.what}")
             ax.set_title(ref_name["title"])

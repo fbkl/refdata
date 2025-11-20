@@ -169,6 +169,8 @@ class RefData:
         self.action_type = action_type
         self.reference_curve_dict = {}
         self.plot_2_sd = False
+        self.ref_color1 = "gray"
+        self.ref_color2 = "lightgray"
 
     def plot(self, reference_name_name= "all"):
 
@@ -237,9 +239,9 @@ class RefData:
         suffix = ""
         if remove_initial_offset:
             suffix = "*"
-            print("TRIGGERED REMOVE INITIAL OFFSET IN REFDATA")
+            logger.debug("TRIGGERED REMOVE INITIAL OFFSET IN REFDATA")
         else:
-            print("DID NOT trigger remove initial offset in RefData!!!")
+            logger.debug("DID NOT trigger remove initial offset in RefData!!!")
         #num_cycles = num_cycles_+4
         if reference_name in self.reference_curve_dict:
             ik_id_so_i = self.reference_curve_dict[reference_name][0]
@@ -271,17 +273,17 @@ class RefData:
                 ax.plot(X, Y, "-", label="{} mean".format(ik_id_so_i.name)+suffix)
             if self.plot_2_sd:
 
-                print("plotting 2sds!")
-                ax.fill_between(X,Y2P, Y2M, alpha=alpha_, label= "{} 2 std ".format(ik_id_so_i.name)+suffix,  linewidth=1, color="lightgray")
+                logger.debug("plotting 2sds!")
+                ax.fill_between(X,Y2P, Y2M, alpha=alpha_, label= "{} 2 std ".format(ik_id_so_i.name)+suffix,  linewidth=1, color=self.ref_color2)
                 if avg_line:
                     ax.plot(X, Y2P, "-", label="{} sd+2".format(ik_id_so_i.name)+suffix)
                     ax.plot(X, Y2M, "-", label="{} sd-2".format(ik_id_so_i.name)+suffix)
             else:
-                print("plotting 1sd!")
+                logger.debug("plotting 1sd!")
                 if avg_line:
                     ax.plot(X, YP, "-", label="{} sd+1".format(ik_id_so_i.name)+suffix)
                     ax.plot(X, YM, "-", label="{} sd-1".format(ik_id_so_i.name)+suffix)
-                ax.fill_between(X,YP, YM, alpha=alpha_, label= "{} 1 std ".format(ik_id_so_i.name)+suffix,  linewidth=1, color="gray")
+                ax.fill_between(X,YP, YM, alpha=alpha_, label= "{} 1 std ".format(ik_id_so_i.name)+suffix,  linewidth=1, color=self.ref_color1)
 
 
         else:
@@ -410,7 +412,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
     #if l_r:
     #    side= -1
 
-    
+    not_defined_curves = [] 
 
     for i,(clip, pelv) in enumerate(zip (clipped_curve, pelvis_rotation)): 
         average_rotation_angle_is_negative = pelv[1].mean() < 0
@@ -423,7 +425,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
                     clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
                     defined = True
-                elif pelvis_plot_only_right_side:
+                elif not pelvis_plot_only_right_side:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
                     clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
@@ -434,7 +436,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
                     clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
                     defined = True
-                elif pelvis_plot_only_right_side:
+                elif not pelvis_plot_only_right_side:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
                     clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
@@ -448,7 +450,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
                     clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
                     defined = True
-                elif pelvis_plot_only_right_side:
+                elif not pelvis_plot_only_right_side:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
                     clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
@@ -459,7 +461,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
                     clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
                     defined = True
-                elif pelvis_plot_only_right_side:
+                elif not pelvis_plot_only_right_side:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
                     clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] )
                     #print(clipped_curve[i][1])
@@ -471,7 +473,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
                     clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] + 90)
                     #print(clipped_curve[i][1])
                     defined = True
-                elif pelvis_plot_only_right_side:
+                elif not pelvis_plot_only_right_side:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
                     clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] - 90)
                     #print(clipped_curve[i][1])
@@ -482,7 +484,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
                     clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] - 90)
                     #print(clipped_curve[i][1])
                     defined = True
-                elif pelvis_plot_only_right_side:
+                elif not pelvis_plot_only_right_side:
                     #clipped_curve[i] = (clipped_curve[i][0], clipped_curve[i][1] +offset)
                     clipped_curve[i] = (clipped_curve[i][0], -clipped_curve[i][1] + 90 )
                     #print(clipped_curve[i][1])
@@ -491,6 +493,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
             print(f"WTF!!!")
         if not defined:
             print("not defined!")
+            not_defined_curves.append(i)
             if average_rotation_angle_is_negative:
                 print("normal case")
             else:
@@ -498,7 +501,18 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
             print(f"{average_rotation_angle_is_negative}, {l_r}, {pelvis_joint_name}")
             clipped_curve[i] = zero_curve
 
-    return clipped_curve
+    new_clipped_curves = []
+    for i, clipped_curve_i in enumerate(clipped_curve):
+        if i in not_defined_curves:
+            continue
+        else:
+            new_clipped_curves.append(clipped_curve_i)
+
+    if len(new_clipped_curves) == 0 or len(clipped_curve):
+        logger.warning("you have no segmented curves! this is HIGHLY UNUSUAL and means you either don't have any right steps segmented for this trial OR you made a mistake")
+    elif (not type(new_clipped_curves) == type(clipped_curve)) or (not type(new_clipped_curves[0])== type(clipped_curve[0]) ):
+        raise Exception("You changed the type of clipped curves")
+    return new_clipped_curves
 
 
 def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref=GaitIKRefData(),
@@ -554,7 +568,8 @@ def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref
 
                         pelvic_tilt_flipper = 1 ## we need this because the pelvis ik is a special case,
                         
-
+                        if not np.abs(ref_name["offset"]) <= 0.1:
+                            logger.warning(f"OFFSET IS SET TO NONZERO VALUE {ref_name['offset']} FOR JOINT {ref_name['name']}. There are no good reasons for using this!")
                         clipped_curves = clip_curve(
                                 data["time"],
                                 data[joint_or_muscle_complete_name]*ref_name["scale"][1]+ref_name["offset"],
@@ -1169,26 +1184,31 @@ class AxCurves():
         self.curves_dic = curves_dic
         self.reference = reference
         self.name = joint_or_muscle_complete_name
-    def update(self):
+    def update(self,side):
         ref_name = self.curves_dic[self.name][1]
         ref_name["position"] = self.position
-        self.curves_dic[self.name] = (self.curves_dic[self.name][0], ref_name, self.curves_dic[self.name][2])
+        self.curves_dic[self.name] = (self.curves_dic[self.name][0], ref_name, side)
         
 from copy import deepcopy
 
-def creat_axs(cccc, ref= IdGaitData()):
+def creat_axs(cccc, ref= IdGaitData(), right_side_pelvis= False):
     ## deepcopy?
     local_cccc = deepcopy(cccc)
     axcurve_list_ = []
     for name, list_of_curves in local_cccc.items():
         some_ax = AxCurves()
         ref_name = list_of_curves[1]
-        side = list_of_curves[2]
+        side = None
+        #print(ref_name)
+        if right_side_pelvis and 'Pelvi' in ref_name["name"]: ## and list_of_curves[2] ==-1: ## this is maybe better because it will change everything that is center,, but we didnt name it center now is right in the kwarg, so it would be inconsistent
+            side = 1
+        else:
+            side = list_of_curves[2]
         some_ax.position = ref_name["position"]
         some_ax.curves_dic = {name:list_of_curves}
         some_ax.name = name
         some_ax.reference = ref
-        some_ax.update()
+        some_ax.update(side)
         logger.debug(ref_name)
         axcurve_list_.append(some_ax)
     return axcurve_list_
@@ -1484,7 +1504,7 @@ def extend_y(x, percent=60):
 import numpy as np
 from scipy import interpolate
 from sklearn.metrics import root_mean_squared_error
-
+from scipy.stats import pearsonr
 
 def rmse(graphs, PLOT_IT=False):
     def from_x_yyy_to_xy_xy_xy(x,y):
@@ -1530,6 +1550,8 @@ def rmse(graphs, PLOT_IT=False):
             logger.debug(k)
             pass
         logger.debug(axc.curves_dic[k][1]['name'])
+        this_my_ref_signal = axc.curves_dic[k][1]['scale']
+        #print(this_my_ref_signal) ## it was not that easy to fix
         this_my_ref = axc.reference.reference_curve_dict[axc.curves_dic[k][1]['name']]
         if len(this_my_ref) >1:
             raise("if you have multiple references you have to think about what you are doing")
@@ -1596,7 +1618,8 @@ def rmse(graphs, PLOT_IT=False):
             aa_ =  reshape_curves(a)
         tf.update({real_name:[aa_[0],aa_[1],bb]})
         #so we need to put them 2 together
-    str_ = ""
+    str_ = f" & {'\\textbf{RMSE}[\\si{\\degree}]': <{23}} & {'\\textbf{RMSE*}[\\si{\\degree}]': <{23}} & {'Pearson R': <{23}} & {'\\textbf{Offset} [\\si{\\degree}] ': <{23}} \\\\ \n\\midrule\n"
+
     for real_name, (g0, g1, bb) in tf.items():
         
         if False:
@@ -1613,14 +1636,23 @@ def rmse(graphs, PLOT_IT=False):
                                       ])
         measured_curve_mean = c[0]
         reference_curve_mean = c[1]
+        if 'pelvis_tilt' in real_name or 'hip_rotation' in real_name: ##this should already be correct, i dont have the patience to figure out where it is wrong
+            logger.warning("HACK i am flipping the curve sign to match the orientation from the reference which changed! Make sure to plot the graphs to check if everything is doing what you want")
+            reference_curve_mean*=-1
 
         if PLOT_IT:
-            plt.plot(x,measured_curve_mean,label='measured')
-            plt.plot(x,reference_curve_mean,label='reference')
+            plt.show()
+            plt.plot(x,measured_curve_mean,label=f'{real_name} measured')
+            plt.plot(x,reference_curve_mean,label=f'{real_name} reference')
             plt.legend()
             logger.debug(real_name)
             plt.show()
-        str_ += f"{real_name: <{20}} & {root_mean_squared_error(measured_curve_mean,reference_curve_mean): <{20}} \\\\ \n"
+
+        rmse_val = root_mean_squared_error(measured_curve_mean,reference_curve_mean)
+        initial_offset = measured_curve_mean[0] - reference_curve_mean[0]
+        rmse2_val = root_mean_squared_error(measured_curve_mean-initial_offset,reference_curve_mean)
+        pear,_ = pearsonr(measured_curve_mean,reference_curve_mean)
+        str_ += f"{real_name: <{23}} & \\trmse{{{rmse_val: <{23}}}} & \\trmse{{{rmse2_val: <{23}}}} & \\tpears{{{pear: <{23}}}} & \\tang{{{initial_offset: <{23}}}} \\\\ \n"
         
     return str_
 

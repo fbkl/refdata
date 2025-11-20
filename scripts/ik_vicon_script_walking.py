@@ -285,21 +285,24 @@ for subject_num in ["S1","S2","S3","S4","S5","S6"]:
                     skip_trials=skip_trials,
                     action=this_action_name, include_actions=actions_to_be_shown,
                     conv_names=cdata,
-                    butchered_clipping=butchered_clipping)
+                    butchered_clipping=butchered_clipping,
+                    combine_sides=False,
+                    pelvis_plot_only_right_side=True
+                                                                  )
     RR = refdata.plot_std_plots(all_ik_curves_for_this_person, plot_std=False,
                                 ref=refdata.GaitIKRefData(),
                                 subplot_grid = (3,3),
                                 subject_identifier=f"Vicon Ref{subject_num}")
 
-    plt.savefig(f'{subject_num}_ik_{this_action_name}3x3_tighter_stds.pdf', bbox_inches = 'tight')
+    plt.savefig(f'{subject_num}_ik_{this_action_name}3x3_tighter_stds_right_pelvis.pdf', bbox_inches = 'tight')
     asRefData = refdata.RefData(this_action_name)
     asRefData.reference_curve_dict = RR[4]
 
     import pickle
 
-    pickle.dump( asRefData, open( f"ik_ref_{this_action_name}_data_s{subject_num}.p", "wb" ) )
+    pickle.dump( asRefData, open( f"ik_ref_{this_action_name}_data_s{subject_num}_right_pelvis.p", "wb" ) )
 
-    _filename = f"{subject_num}_{this_action_name}_allcurves.pkl"
+    _filename = f"{subject_num}_{this_action_name}_allcurves_right_pelvis.pkl"
 
     subject_complete_filename = os.path.join(_filename)
     print(subject_complete_filename)

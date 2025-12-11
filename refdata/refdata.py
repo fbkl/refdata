@@ -1184,7 +1184,9 @@ class AxCurves():
         self.curves_dic = curves_dic
         self.reference = reference
         self.name = joint_or_muscle_complete_name
-    def update(self,side):
+    def update(self,side=None):
+        if not side:
+            side = self.curves_dic[self.name][2]
         ref_name = self.curves_dic[self.name][1]
         ref_name["position"] = self.position
         self.curves_dic[self.name] = (self.curves_dic[self.name][0], ref_name, side)
@@ -1618,10 +1620,27 @@ def rmse(graphs, PLOT_IT=False):
             aa_ =  reshape_curves(a)
         tf.update({real_name:[aa_[0],aa_[1],bb]})
         #so we need to put them 2 together
-    str_ = f" & {'\\textbf{RMSE}[\\si{\\degree}]': <{23}} & {'\\textbf{RMSE*}[\\si{\\degree}]': <{23}} & {'Pearson R': <{23}} & {'\\textbf{Offset} [\\si{\\degree}] ': <{23}} \\\\ \n\\midrule\n"
+
+    str_ = ""
+    prev_category = None
+    category_names = {
+        "_ik": ("\\textbf{Inverse Kinematics}","Angle[\\si{\\degree}]"),
+        "_id": ("\\textbf{Inverse Dynamics}", "Torque[\\si{\\newton\\meter\\per\\kilogram}]"),
+        "_so": ("\\textbf{Static Optimization}","Activation")
+    }
+    #line = lambda x: f"{x} & \\textbf{{RMSE}}[{x}] & \\textbf{{RMSE*}}[{x}] & Pearson R & \\textbf{{Offset}} [{x}] \\\\ \n"
+    line = lambda x: f"{x} & \\textbf{{RMSE}} & \\textbf{{RMSE*}} & Pearson R & \\textbf{{Offset}} \\\\ \n"
 
     for real_name, (g0, g1, bb) in tf.items():
-        
+        current_category = None
+        for suffix in ["_ik", "_id", "_so"]:
+            if suffix in real_name:
+                current_category = suffix
+                break
+        if current_category != prev_category and current_category is not None:
+            str_ += f"\\midrule\n\\multicolumn{{5}}{{c}}{{{category_names[current_category][0]}}} \\\\ \n{line(category_names[current_category][1])}\\midrule\n"
+            prev_category = current_category
+
         if False:
             for c in bb[1]:
                 plt.plot(bb[0]/100,c)
@@ -1652,7 +1671,12 @@ def rmse(graphs, PLOT_IT=False):
         initial_offset = measured_curve_mean[0] - reference_curve_mean[0]
         rmse2_val = root_mean_squared_error(measured_curve_mean-initial_offset,reference_curve_mean)
         pear,_ = pearsonr(measured_curve_mean,reference_curve_mean)
-        str_ += f"{real_name: <{23}} & \\trmse{{{rmse_val: <{23}}}} & \\trmse{{{rmse2_val: <{23}}}} & \\tpears{{{pear: <{23}}}} & \\tang{{{initial_offset: <{23}}}} \\\\ \n"
+        display_name = re.sub(r'\d+', '', real_name)        # Remove numbers
+        display_name = "\\" + display_name.replace('_', '')          # Replace underscores with spaces
+
+        str_ += f"{display_name: <{23}} & \\trmse{{{rmse_val: <{23}}}} & \\trmse{{{rmse2_val: <{23}}}} & \\tpears{{{pear: <{23}}}} & \\tang{{{initial_offset: <{23}}}} \\\\ \n"
         
     return str_
+
+
 

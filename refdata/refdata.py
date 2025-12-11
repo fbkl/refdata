@@ -1655,6 +1655,7 @@ def rmse(graphs, PLOT_IT=False):
                                       ])
         measured_curve_mean = c[0]
         reference_curve_mean = c[1]
+        logger.warning("DEPRECATED. DO NOT USE THIS. these values are but an approximation of the real thing. This needs to be done carefully, and for that the correct tool is metrics!")
         if 'pelvis_tilt' in real_name or 'hip_rotation' in real_name: ##this should already be correct, i dont have the patience to figure out where it is wrong
             logger.warning("HACK i am flipping the curve sign to match the orientation from the reference which changed! Make sure to plot the graphs to check if everything is doing what you want")
             reference_curve_mean*=-1

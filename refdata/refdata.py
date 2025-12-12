@@ -10,7 +10,7 @@ import os
 import traceback
 from . import graph_params
 from . import my_log
-
+logging = my_log.logging
 logger = my_log.logger
 
 def check_ver(package, ver_requirements):

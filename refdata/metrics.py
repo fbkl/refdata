@@ -3,40 +3,44 @@ import pandas as pd
 import numpy as np
 from scipy import signal, stats
 from scipy.spatial.transform import Rotation as R
+from . import my_log
 
+logger = my_log.logger
 
-def get_roted(this_df):
+logger.info("Loading metrics")
+
+def get_roted(this_df,in_degrees=True):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]
 
-    R_correction = R.from_euler('z', initial_rotation, degrees=True).inv()
+    R_correction = R.from_euler('z', initial_rotation, degrees=in_degrees).inv()
 
     angles = []
     for i in range(len(this_df)):
-        tilt = this_df['pelvis_tilt'].iloc[i]
-        obl = this_df['pelvis_list'].iloc[i]
+        tilt = this_df['pelvis_tilt_x'].iloc[i]
+        obl = this_df['pelvis_obliquity'].iloc[i]
         rot = this_df['pelvis_rotation'].iloc[i]
 
-        R_current = R.from_euler('zyx', [rot, obl, tilt], degrees=True)
+        R_current = R.from_euler('zyx', [rot, obl, tilt], degrees=in_degrees)
         R_correct = R_correction * R_current
         
-        corrected = R_correct.as_euler('zyx', degrees=True)
+        corrected = R_correct.as_euler('zyx', degrees=in_degrees)
         angles.append(corrected)
     angles = np.array(angles)
     
     ## we invert pelvis_tilt manually i am doing something wrong here
-    if angles[0,2] < 0:
+    if False and angles[0,2] < 0:
         
-        this_df['pelvis_tilt'] = -angles[:,2]
+        this_df['pelvis_tilt_x'] = -angles[:,2]
     else:
-        this_df['pelvis_tilt'] = angles[:,2]
+        this_df['pelvis_tilt_x'] = angles[:,2]
     
-    if angles[0,1] < 0:
+    if False and angles[0,1] < 0:
         
-        this_df['pelvis_list'] = -angles[:,1]
+        this_df['pelvis_obliquity'] = -angles[:,1]
     else:
-        this_df['pelvis_list'] = angles[:,1] 
+        this_df['pelvis_obliquity'] = angles[:,1] 
         
-    this_df['pelvis_rotation'] = angles[:,0]
+    this_df['pelvis_rotation'] = angles[:,0] 
     
     
     
@@ -101,7 +105,7 @@ def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
         rename_map_i = {
             "pelvis_tilt": "pelvis_tilt_x",
             "pelvis_list": "pelvis_obliquity",
-            "pelvis_rotation": "pelvis_rot"
+            "pelvis_rotation": "pelvis_rotation"
         }
 
         if is_id:
@@ -109,16 +113,16 @@ def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
                 if col == "time":
                     continue
                 imu_data = imu_data.rename(columns={col:col+"_moment"})
-        #imu_data = imu_data.rename(columns=rename_map_i)
+        imu_data = imu_data.rename(columns=rename_map_i)
         #imu_data = get_roted(imu_data)
 
         rename_map_m = {
-            "pelvis_tilt": "pelvis_obliquity",
-            "pelvis_list": "pelvis_tilt_x",
-            "pelvis_rotation": "pelvis_rot"
+            "pelvis_tilt": "pelvis_tilt_x",
+            "pelvis_list": "pelvis_obliquity",
+            "pelvis_rotation": "pelvis_rotation"
         }
 
-        #mocap_data = mocap_data.rename(columns=rename_map_m)
+        mocap_data = mocap_data.rename(columns=rename_map_m)
         #mocap_data = get_roted(mocap_data)
 
 
@@ -171,7 +175,7 @@ def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
         #common_joints
 
         if not is_id:
-            imu_resampled = get_roted(imu_resampled)
+            imu_resampled = get_roted(imu_resampled, in_degrees=False)
             mocap_resampled = get_roted(mocap_resampled)
 
         # calculating the time_offset:
@@ -221,8 +225,11 @@ def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
                 imu_signal = imu_resampled[joint]*scale_imu
                 mocap_signal = mocap_resampled[joint]*scale_mocap
                 fig,ax = plt.subplots(1,1, figsize= (10,2.5))
-                ax.plot(imu_resampled.index, imu_signal)
-                ax.plot(mocap_resampled.index+time_offset, mocap_signal)
+                ax.plot(imu_resampled.index, imu_signal, label="imu")
+                ax.plot(mocap_resampled.index+time_offset, mocap_signal, label="mocap")
+                ax.legend()
+                ax.axvline(mask_mocap[0], color="r")
+                ax.axvline(mask_mocap[1], color="r")
                 ax.set_title(joint)
                 plt.show()
 

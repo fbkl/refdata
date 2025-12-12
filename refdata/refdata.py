@@ -9,9 +9,9 @@ from importlib.metadata import version
 import os
 import traceback
 from . import graph_params
-import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from . import my_log
+
+logger = my_log.logger
 
 def check_ver(package, ver_requirements):
     ver_requirements_list = ver_requirements.split('.')

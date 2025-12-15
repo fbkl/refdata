@@ -457,7 +457,7 @@ class Dismissed():
             self.slumpList.append(SyncedLump(a,b,self.weight))
 
     
-    def gen_action_plots(self, gtype, iomtype):
+    def gen_action_plots(self, gtype, iomtype, conv_names= None, ref=None):
         
         stll = None
         stlr = None
@@ -486,7 +486,7 @@ class Dismissed():
                 this_file_name = [stli.my_files[1],stri.my_files[1]]
 
             for l_r, (data_i, which_clippings) in enumerate(zip([stlis, stris],(stli.step_seg_l_list, stri.step_seg_r_list))):
-                all_grf_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, ref=None, conv_names=conv_names))
+                all_grf_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, ref=ref, conv_names=conv_names))
         return all_grf_curves_for_this_person
 
     def get_strials(self, gtype):

@@ -104,9 +104,9 @@ class SyncedTrials:
             mocap_files = [mocap_files]
 
 
-        self.scale_mocap = 180/np.pi
+        self.scale_mocap = np.pi/180
 
-        self.scale_imu = 180/np.pi
+        self.scale_imu = np.pi/180
        
         # the mocap pelvis has a different frame, we need to rename them :
         ## this isnt working but whatever
@@ -180,6 +180,10 @@ class SyncedTrials:
             # mocap is already at wall time
             mocap_data[i] = mocap_data[i].set_index('time')
             
+            if self.scale_mocap < 0.9 or self.scale_mocap > 1.1: ## this will mess up the translations
+                logger.info("regularizing mocap data")
+                mocap_data[i] *= self.scale_mocap
+                self.scale_mocap = 1 
             t_starts.append(mocap_data[i].index[0])
             t_ends.append(mocap_data[i].index[-1])
 

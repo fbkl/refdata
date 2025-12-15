@@ -472,19 +472,25 @@ class Dismissed():
 
 
         for stli, stri in zip(stll, stlr):
+            #logger.info(stli.my_files)
+            #logger.info(stri.my_files)
+            this_file_name= ["",""]
             if iomtype == "imu":
                 stlis = stli.imu_resampled
                 stris = stli.imu_resampled
+                this_file_name = [stli.my_files[0],stri.my_files[0]]
 
             elif iomtype == "mocap":
                 stlis = stli.mocap_resampled
                 stris = stli.mocap_resampled
+                this_file_name = [stli.my_files[1],stri.my_files[1]]
 
             for l_r, (data_i, which_clippings) in enumerate(zip([stlis, stris],(stli.step_seg_l_list, stri.step_seg_r_list))):
-                all_grf_curves_for_this_person.update( refdata.generate_action_plots_meat(l_r,"fuck", data_i, data_i.index,which_clippings, ref=None, conv_names=conv_names))
+                all_grf_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, ref=None, conv_names=conv_names))
+        return all_grf_curves_for_this_person
 
     def get_strials(self, gtype):
-        sTrialList = []
+        sTrialsList = []
         if gtype== "ik":
             for sLumpi in self.slumpList:
                 sTrialsList.append(sLumpi.ik)
@@ -503,7 +509,7 @@ class Dismissed():
         else:
             logger.error("Unknown graph type!")
 
-        return sTrialList
+        return sTrialsList
 
     def run_analysis(self, gtype, lag=None):
 

@@ -48,8 +48,32 @@ def get_roted(this_df,in_degrees=True):
     
     return this_df
 
+
+def parse_header(this_file):
+    #print("=== IMU .STO FILE ===")
+    skip_rows = 0
+    scale = 180/np.pi
+    is_id = False
+    if "tau" in this_file:
+        scale = 1
+        is_id = True
+    with open(this_file, 'r') as f:
+        for i in range(20):  # First 20 lines
+            this_line = f.readline().rstrip()
+            #print(f"{i}: {this_line}")
+            if "endheader" in this_line:
+                skip_rows = i+1
+            if "inDegrees=yes" in this_line:
+                scale = 1
+            if "time" in this_line and "moment" in this_line:
+                scale = 1
+                is_id = True
+    return skip_rows, scale, is_id
+
 class SyncedTrial:
     def __init__(self, this_imu_file, this_mocap_file, lag = [] ):
+
+
         self.scale_mocap = 180/np.pi
 
         self.scale_imu = 180/np.pi
@@ -342,7 +366,6 @@ def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
         sTiii.rebork()
         display(sTiii.ui)
         sTrials.append(sTiii)
-        break
 
     metrics_output = Output()
     skip_joints = ["lumbar", "subtalar", "mtp"]
@@ -363,6 +386,7 @@ def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
     with metrics_output:
         fig, ax = plt.subplots(rows,cols, figsize= (10,2.5*rows), constrained_layout= True)
         ax = ax.flatten()
+        display(fig)
     def compute_metrics(*args):
         with metrics_output:
             metrics_output.clear_output()

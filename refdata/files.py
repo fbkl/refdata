@@ -2,7 +2,9 @@
 
 import re
 from glob import glob
-import logging
+from . import my_log
+logging = my_log.logging
+logger = my_log.logger
 from os import path
 
 class TrialFile():

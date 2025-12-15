@@ -1,7 +1,6 @@
 #from refdata import *
-#import files
-import os, sys; sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import files
-import graph_params
-import merge_grfs
+#import file
+from .files import *
+from .graph_params import *
+from .merge_grfs import *
 from .refdata import *

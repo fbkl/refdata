@@ -83,6 +83,7 @@ class SyncedTrials:
     def __init__(self, imu_files, mocap_files, lag = [] ):
         self.my_files = [imu_files, mocap_files]
 
+        self.curve_suffix = ""
         self.master = False
         self.min_size_ext = None
 
@@ -131,6 +132,7 @@ class SyncedTrials:
             # Load IMU .sto files (OpenSim format)
             imu_data[i] = pd.read_csv(this_imu_file, delimiter='\t', skiprows=imu_skip_rows)  
             if "tau" in this_imu_file: ## i assume is id
+                self.curve_suffix = "_moment"
                 for col in imu_data[i].columns:
                     if col == "time":
                         continue
@@ -369,19 +371,22 @@ class SyncedTrials:
             ax.set_title(joint)
         valid_l = []
         valid_r = []
+        suffix_length = len("_l"+self.curve_suffix )
         for lefties in self.step_seg_l_list[:-1]:
             style = ":" if lefties[0] < self.mask_mocap[0] or lefties[1] > self.mask_mocap[1] else "-"
-            for ax in self.axs:
-                ax.axvline(lefties[0],color="r", ls=style)
-                ax.axvline(lefties[1],color="r", ls=style)
+            for joint, ax in zip( self.common_joints, self.axs):
+                if "_l"+self.curve_suffix == joint[-suffix_length:]: ## i should look only at the end, if it breaks, you know why
+                    ax.axvline(lefties[0],color="r", ls=style)
+                    ax.axvline(lefties[1],color="r", ls=style)
             if style == "-":
                 ## then we add this one
                 valid_l.append(lefties)
         for righties in  self.step_seg_r_list[:-1]:
             style = ":" if righties[0] < self.mask_mocap[0] or righties[1] > self.mask_mocap[1] else "-"
-            for ax in self.axs:
-                ax.axvline(righties[0],color="b", ls=style)
-                ax.axvline(righties[1],color="b", ls=style)
+            for joint, ax in zip( self.common_joints, self.axs):
+                if "_r"+self.curve_suffix == joint[-suffix_length:]:
+                    ax.axvline(righties[0],color="b", ls=style)
+                    ax.axvline(righties[1],color="b", ls=style)
             if style == "-":
                 ## then we add this one
                 valid_r.append(righties)
@@ -431,74 +436,106 @@ class SyncedTrials:
 
             plt.close(self.fig)
 
-def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
+## this is for this subject and this action everything, right?
 
-    time_offsets = []
-    sTrials = []
-    if lag:
-        time_offsets = lag 
+from .refdata import generate_action_plots_meat
+
+class Dismissed():
+    """
+        Container for a list of SyncedLumps
+
+            we need this because setting up the plots without it would be sorta confsuing as hell
+
+    """
+
+    def __init__(self, slumpList=[], weight=None):
+        self.slumpList = slumpList
+        self.weight = weight
+
+    def set_by_two_lists_of_lumps(self, imuLs, mocapLs):
+        for a, b in zip(imuLs, mocapLs):
+            self.slumpList.append(SyncedLump(a,b,self.weight))
+
     
-    ui_list = []
-    common_joints = []
-
-    for this_imu_file, this_mocap_file in zip(imu_ik_trials,vicon_ik_trials):
-
-        sTiii = SyncedTrial(this_imu_file, this_mocap_file)
-
-        if not common_joints:
-            common_joints = sTiii.common_joints
-        if not lag:
-            time_offsets.append(sTiii.time_offset)
-        else:
-            print("using lag estimated from ik")
-            time_offset = lag[iii]
+    def gen_action_plots(self, gtype, iomtype):
         
-        sTiii.create_controls()
-        ui_list.append(sTiii.ui)
-        sTiii.rebork()
-        display(sTiii.ui)
-        sTrials.append(sTiii)
+        stll = None
+        stlr = None
+        if gtype == "grf":
+            stll = self.get_strials("grfl")
+            stlr = self.get_strials("grfr")
+        else:
+            stll = self.get_strials(gtype)
+            stlr = stll
 
-    metrics_output = Output()
-    skip_joints = ["lumbar", "subtalar", "mtp"]
+        all_grf_curves_for_this_person = {}
 
-    ## ffs
-    included_joints = []
-    for jjjjj, joint in enumerate(common_joints):
-        is_skip = False
-        for sk in skip_joints:
-            if sk in joint:
-                is_skip = True
-                break
-        if is_skip:
-            continue
-        included_joints.append(joint)
-    cols = 2
-    rows = int(np.ceil(len(included_joints)/cols)) 
-    with metrics_output:
-        fig, ax = plt.subplots(rows,cols, figsize= (10,2.5*rows), constrained_layout= True)
-        ax = ax.flatten()
-        display(fig)
-    def compute_metrics(*args):
-        with metrics_output:
-            metrics_output.clear_output()
-        imu_all = pd.DataFrame()
-        mocap_all = pd.DataFrame()
-        scale_imu=1
-        scale_mocap=1
+
+        for stli, stri in zip(stll, stlr):
+            if iomtype == "imu":
+                stlis = stli.imu_resampled
+                stris = stli.imu_resampled
+
+            elif iomtype == "mocap":
+                stlis = stli.mocap_resampled
+                stris = stli.mocap_resampled
+
+            for l_r, (data_i, which_clippings) in enumerate(zip([stlis, stris],(stli.step_seg_l_list, stri.step_seg_r_list))):
+                all_grf_curves_for_this_person.update( refdata.generate_action_plots_meat(l_r,"fuck", data_i, data_i.index,which_clippings, ref=None, conv_names=conv_names))
+
+    def get_strials(self, gtype):
+        sTrialList = []
+        if gtype== "ik":
+            for sLumpi in self.slumpList:
+                sTrialsList.append(sLumpi.ik)
+        elif gtype== "id":
+            for sLumpi in self.slumpList:
+                sTrialsList.append(sLumpi.id)
+        elif gtype== "so":
+            for sLumpi in self.slumpList:
+                sTrialsList.append(sLumpi.so)
+        elif gtype== "grfl": ## this is super bad
+            for sLumpi in self.slumpList:
+                sTrialsList.append(sLumpi.grfl)
+        elif gtype== "grfr": ## this is super bad too, like,, we need to figure this out.
+            for sLumpi in self.slumpList:
+                sTrialsList.append(sLumpi.grfr)
+        else:
+            logger.error("Unknown graph type!")
+
+        return sTrialList
+
+    def run_analysis(self, gtype, lag=None):
+
+        time_offsets = []
+        sTrials = self.get_strials(gtype)
+        if lag:
+            time_offsets = lag 
+        
+        ui_list = []
+        common_joints = []
+
         for sTiii in sTrials:
 
-            ##this is bad, but if i am mixing scales it is also bad
-            scale_imu = sTiii.scale_imu
-            scale_mocap = sTiii.scale_mocap
-            imu_all = pd.concat([imu_all, sTiii.imu_block], ignore_index=True)
-            mocap_all = pd.concat([mocap_all, sTiii.mocap_block], ignore_index=True)
+            if not common_joints:
+                common_joints = sTiii.common_joints
+            if not lag:
+                time_offsets.append(sTiii.time_offset)
+            else:
+                print("using lag estimated from ik")
+                time_offset = lag[iii]
+            
+            sTiii.create_controls()
+            ui_list.append(sTiii.ui)
+            sTiii.rebork()
+            display(sTiii.ui)
 
+        metrics_output = Output()
+        skip_joints = ["lumbar", "subtalar", "mtp"]
 
-        # we plot the synced values (sanity check)
-        # and compute the metrics
-        results = {}
-        for jjjjj, joint in enumerate(included_joints):
+        ## ffs
+        included_joints = []
+        for jjjjj, joint in enumerate(common_joints):
             is_skip = False
             for sk in skip_joints:
                 if sk in joint:
@@ -506,28 +543,62 @@ def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
                     break
             if is_skip:
                 continue
-            imu_signal = imu_all[joint].values * scale_imu  # to degrees if needed
-            mocap_signal = mocap_all[joint].values * scale_mocap  # to degrees if needed
-            ax[jjjjj].clear()
-            ax[jjjjj].plot(imu_signal,label="imu"+joint)
-            ax[jjjjj].plot(mocap_signal,label="mocap"+joint)
-            #plt.legend()
-            #plt.title(joint)
-            ax[jjjjj].set_title(joint)
-            #plt.show()
-            rmse = np.sqrt(np.mean((imu_signal - mocap_signal)**2))
-            pearson_r, p_value = stats.pearsonr(imu_signal, mocap_signal)
+            included_joints.append(joint)
+        cols = 2
+        rows = int(np.ceil(len(included_joints)/cols)) 
+        with metrics_output:
+            fig, ax = plt.subplots(rows,cols, figsize= (10,2.5*rows), constrained_layout= True)
+            ax = ax.flatten()
+            display(fig)
+        def compute_metrics(*args):
+            with metrics_output:
+                metrics_output.clear_output()
+            imu_all = pd.DataFrame()
+            mocap_all = pd.DataFrame()
+            scale_imu=1
+            scale_mocap=1
+            for sTiii in sTrials:
 
-            results[joint] = {'RMSE': rmse, 'Pearson_r': pearson_r}
-        # Make it a nice dataframe
-        results_df = pd.DataFrame(results).T
-        print(results_df)
+                ##this is bad, but if i am mixing scales it is also bad
+                scale_imu = sTiii.scale_imu
+                scale_mocap = sTiii.scale_mocap
+                imu_all = pd.concat([imu_all, sTiii.imu_block], ignore_index=True)
+                mocap_all = pd.concat([mocap_all, sTiii.mocap_block], ignore_index=True)
 
-    comp_button = Button(description="Compute Metrics")
-    comp_button.on_click(compute_metrics)
-    ooo = VBox([comp_button, metrics_output])
-    display(ooo)
-    return time_offsets
+
+            # we plot the synced values (sanity check)
+            # and compute the metrics
+            results = {}
+            for jjjjj, joint in enumerate(included_joints):
+                is_skip = False
+                for sk in skip_joints:
+                    if sk in joint:
+                        is_skip = True
+                        break
+                if is_skip:
+                    continue
+                imu_signal = imu_all[joint].values * scale_imu  # to degrees if needed
+                mocap_signal = mocap_all[joint].values * scale_mocap  # to degrees if needed
+                ax[jjjjj].clear()
+                ax[jjjjj].plot(imu_signal,label="imu"+joint)
+                ax[jjjjj].plot(mocap_signal,label="mocap"+joint)
+                #plt.legend()
+                #plt.title(joint)
+                ax[jjjjj].set_title(joint)
+                #plt.show()
+                rmse = np.sqrt(np.mean((imu_signal - mocap_signal)**2))
+                pearson_r, p_value = stats.pearsonr(imu_signal, mocap_signal)
+
+                results[joint] = {'RMSE': rmse, 'Pearson_r': pearson_r}
+            # Make it a nice dataframe
+            results_df = pd.DataFrame(results).T
+            print(results_df)
+
+        comp_button = Button(description="Compute Metrics")
+        comp_button.on_click(compute_metrics)
+        ooo = VBox([comp_button, metrics_output])
+        display(ooo)
+        return time_offsets
 
 def header(sub):
     n = 81
@@ -537,3 +608,68 @@ def header(sub):
     print("="*n)
     print("="*a + sub +"="*a)
     print("="*n)
+
+
+class Lump():
+
+    def __init__(self, head, grfl, grfr, id_, so ):
+        self.ik_head = head ### this is the file that will be used to sync everythign else
+        self.grfl = grfl
+        self.grfr = grfr
+        self.id = id_
+        self.so = so
+        #def set_clippings(self,clipps):
+    #    self.clippings = clipps
+    def __repr__(self):
+        return f"I am a lump!\n{self.ik_head}\n{self.grfl}\n{self.grfr}\n{self.id}\n{self.so}\n"
+class IMULump(Lump):
+    def __init__(self, *args):
+        super().__init__(*args)
+    def __repr__(self):
+        return "IMU LUMP"+super().__repr__()
+
+
+class MocapLump(Lump):
+    def __init__(self, *args):
+        super().__init__(*args)
+    def __repr__(self):
+        return "MOCAP LUMP"+super().__repr__()
+
+from .refdata import each_side_plot_meat
+
+class SyncedLump(): ## dont get distracted. a lump is a trial 
+    #with all the data from all the sources okay
+    def __init__(self, imuLump, mocapLump, weight):
+        self.weight = weight
+        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head) ## this will be automatically synced
+        self.ik.master = True
+        self.lag = self.ik.time_offset
+        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag)
+        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag)
+        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag)
+        self.so = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag)
+        
+        self.grf_split_me()
+        self.update_from_grf()
+
+    def update_from_grf(self):
+
+        for sti  in [self.ik, self.grfl, self.grfr, self.id, self.so]:
+            sti.step_seg_l_list = self.step_seg_l_list
+            sti.step_seg_r_list = self.step_seg_r_list
+
+        self.ik.create_plot()
+        self.ik.rebork()
+        for sti  in [self.grfl, self.grfr, self.id, self.so]:
+            sti.mask_from(self.ik)
+    def grf_split_me(self):
+        zero_time = 0
+        self.step_seg_l_list = each_side_plot_meat(self.grfl.imu_resampled, self.grfl.imu_resampled.index,zero_time,grf_name_prefix = "1_ground_", side="Left", weight=self.weight)
+        self.step_seg_r_list = each_side_plot_meat(self.grfr.imu_resampled, self.grfr.imu_resampled.index,zero_time,grf_name_prefix = "ground_", side="Right", weight=self.weight)
+
+    def rebork_all(self):
+        for sti  in [self.grfl, self.grfr, self.id, self.so]:
+            sti.create_plot()
+            sti.rebork()
+
+

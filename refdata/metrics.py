@@ -9,6 +9,11 @@ logger = my_log.logger
 
 logger.info("Loading metrics")
 
+PA = "pelvis_tilt"
+#PA = "pelvis_tilt_x"
+PB = "pelvis_list"
+#PB = "pelvis_obliquity"
+
 from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output, Layout
 
 def get_roted(this_df,in_degrees=True):
@@ -18,8 +23,8 @@ def get_roted(this_df,in_degrees=True):
 
     angles = []
     for i in range(len(this_df)):
-        tilt = this_df['pelvis_tilt_x'].iloc[i]
-        obl = this_df['pelvis_obliquity'].iloc[i]
+        tilt = this_df[PA].iloc[i]
+        obl = this_df[PB].iloc[i]
         rot = this_df['pelvis_rotation'].iloc[i]
 
         R_current = R.from_euler('zyx', [rot, obl, tilt], degrees=in_degrees)
@@ -32,15 +37,15 @@ def get_roted(this_df,in_degrees=True):
     ## we invert pelvis_tilt manually i am doing something wrong here
     if False and angles[0,2] < 0:
         
-        this_df['pelvis_tilt_x'] = -angles[:,2]
+        this_df[PA] = -angles[:,2]
     else:
-        this_df['pelvis_tilt_x'] = angles[:,2]
+        this_df[PA] = angles[:,2]
     
     if False and angles[0,1] < 0:
         
-        this_df['pelvis_obliquity'] = -angles[:,1]
+        this_df[PB] = -angles[:,1]
     else:
-        this_df['pelvis_obliquity'] = angles[:,1] 
+        this_df[PB] = angles[:,1] 
         
     this_df['pelvis_rotation'] = angles[:,0] 
     
@@ -106,14 +111,14 @@ class SyncedTrials:
         # the mocap pelvis has a different frame, we need to rename them :
         ## this isnt working but whatever
         rename_map_i = {
-            "pelvis_tilt": "pelvis_tilt_x",
-            "pelvis_list": "pelvis_obliquity",
+            "pelvis_tilt": PA,
+            "pelvis_list": PB,
             "pelvis_rotation": "pelvis_rotation"
         }
         
         rename_map_m = {
-            "pelvis_tilt": "pelvis_tilt_x",
-            "pelvis_list": "pelvis_obliquity",
+            "pelvis_tilt": PA,
+            "pelvis_list": PB,
             "pelvis_rotation": "pelvis_rotation"
         }
 
@@ -137,7 +142,9 @@ class SyncedTrials:
                     if col == "time":
                         continue
                     imu_data[i] = imu_data[i].rename(columns={col:col+"_moment"})
-            imu_data[i] = imu_data[i].rename(columns=rename_map_i)
+            
+
+            #imu_data[i] = imu_data[i].rename(columns=rename_map_i)
             # Get the first timestamp
             t0 = imu_data[i]["time"].iloc[0]  # .iloc[0] not .index[0]
 
@@ -160,7 +167,9 @@ class SyncedTrials:
 
             # Load Vicon .mot files
             mocap_data[i] = pd.read_csv(this_mocap_file, delimiter='\t', skiprows=mocap_skip_rows)
-            mocap_data[i] = mocap_data[i].rename(columns=rename_map_m)
+            
+            #mocap_data[i] = mocap_data[i].rename(columns=rename_map_m)
+            
             # i want to save the mocap data begining and end. when i dont have mocap, i dont have a reference. 
             # if i compare to padded values im messing things up
             # so after everything is done I will use this to slice the output
@@ -468,7 +477,7 @@ class Dismissed():
             stll = self.get_strials(gtype)
             stlr = stll
 
-        all_grf_curves_for_this_person = {}
+        all_curves_for_this_person = {}
 
 
         for stli, stri in zip(stll, stlr):
@@ -477,17 +486,17 @@ class Dismissed():
             this_file_name= ["",""]
             if iomtype == "imu":
                 stlis = stli.imu_resampled
-                stris = stli.imu_resampled
+                stris = stri.imu_resampled
                 this_file_name = [stli.my_files[0],stri.my_files[0]]
 
             elif iomtype == "mocap":
                 stlis = stli.mocap_resampled
-                stris = stli.mocap_resampled
+                stris = stri.mocap_resampled
                 this_file_name = [stli.my_files[1],stri.my_files[1]]
 
             for l_r, (data_i, which_clippings) in enumerate(zip([stlis, stris],(stli.step_seg_l_list, stri.step_seg_r_list))):
-                all_grf_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, ref=ref, conv_names=conv_names))
-        return all_grf_curves_for_this_person
+                all_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, all_curves_for_this_person, ref=ref, conv_names=conv_names))
+        return all_curves_for_this_person
 
     def get_strials(self, gtype):
         sTrialsList = []

@@ -539,12 +539,11 @@ def generate_action_plots(action_trials, xy_clippings_both, skip_trials,include_
 
             data = this_trial.data
             data_time = data["time"]
-            all_curves_for_this_person.update(generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, **kwargs))
+            all_curves_for_this_person.update(generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, all_curves_for_this_person, **kwargs))
 
     return all_curves_for_this_person
 
-def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, ref=GaitIKRefData(), conv_names=None, curve_suffix="", use_absolute_times=False, butchered_clipping=[], combine_sides=True, pelvis_plot_only_right_side=False):
-    all_curves_for_this_person = {}
+def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, all_curves_for_this_person, ref=GaitIKRefData(), conv_names=None, curve_suffix="", use_absolute_times=False, butchered_clipping=[], combine_sides=True, pelvis_plot_only_right_side=False):
     try:
     #for i_file, file in enumerate(action_trials):
 
@@ -567,10 +566,10 @@ def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, re
                 side = l_r
                 if ("pelvis" in joint_or_muscle_complete_name or "lumbar" in joint_or_muscle_complete_name) and combine_sides :
                     side = -1
-                    logger.debug(xy_clippings_both[1])
+                    #logger.debug(xy_clippings_both[1])
                 #    which_clippings = xy_clippings_both[1][file]
                 #else:
-                    logger.debug(xy_clippings_both[l_r])
+                    #logger.debug(xy_clippings_both[l_r])
                 #    which_clippings = xy_clippings_both[l_r][file]
 
                 pelvic_tilt_flipper = 1 ## we need this because the pelvis ik is a special case,

@@ -515,104 +515,111 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
     return new_clipped_curves
 
 
-def generate_action_plots(action_trials_, xy_clippings_both, skip_trials=[], ref=GaitIKRefData(),
-        conv_names=None, include_actions=[], action=None, curve_suffix="", use_absolute_times=False, butchered_clipping=[], combine_sides=True, pelvis_plot_only_right_side=False):
+def generate_action_plots(action_trials, xy_clippings_both, skip_trials,include_actions, action, **kwargs):
+
     all_curves_for_this_person = {}
 
     for l_r, clips in enumerate(xy_clippings_both):
         for i_file,(file, which_clippings) in enumerate(clips.items()):
-            try:
-            #for i_file, file in enumerate(action_trials):
-                this_action_name = ""
-                logger.debug(i_file)
-                logger.debug(skip_trials)
-                matching_actions = [action_name for action_name in include_actions if action_name in file]
-                if not matching_actions or i_file in skip_trials :
-                    logger.warning("skipping file: %s"%file)
-                    continue
-                elif len(matching_actions) >1:
-                    raise ValueError("More than one action in the specified file name!")
+            this_action_name = ""
+            logger.debug(i_file)
+            logger.debug(skip_trials)
+            matching_actions = [action_name for action_name in include_actions if action_name in file]
+            if not matching_actions or i_file in skip_trials :
+                logger.warning("skipping file: %s"%file)
+                continue
+            elif len(matching_actions) >1:
+                raise ValueError("More than one action in the specified file name!")
+            else:
+                if action:
+                    this_action_name= action
                 else:
-                    if action:
-                        this_action_name= action
-                    else:
-                        this_action_name = matching_actions[0]
-                this_trial = TrialData(file, remove_time_offset=use_absolute_times)
+                    this_action_name = matching_actions[0]
+            this_trial = TrialData(file, remove_time_offset=use_absolute_times)
 
-                data = this_trial.data
+            data = this_trial.data
+            data_time = data["time"]
+            all_curves_for_this_person.update(generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, **kwargs))
 
-                for joint_or_muscle_name, ref_name in conv_names.items():
+    return all_curves_for_this_person
 
-                    logger.debug(f"trying to find {joint_or_muscle_name}")
-                    if joint_or_muscle_name+curve_suffix in data.columns:
-                        joint_or_muscle_name_suffix = ["",""]
-                    elif joint_or_muscle_name+"_l"+curve_suffix in data.columns and joint_or_muscle_name+"_r"+curve_suffix in data.columns:
-                        joint_or_muscle_name_suffix = ["_l","_r"]
-                    else:
-                        logger.error(f"Could not find {joint_or_muscle_name} in source data!")
-                        continue ## I think...
-                    if ref_name["plot_it"]:
-                        logger.debug(joint_or_muscle_name_suffix)
-                        joint_or_muscle_complete_name = joint_or_muscle_name+joint_or_muscle_name_suffix[l_r]+curve_suffix
-                        if not joint_or_muscle_complete_name in all_curves_for_this_person.keys():
-                            all_curves_for_this_person.update({joint_or_muscle_complete_name:([],"","")})
+def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, ref=GaitIKRefData(), conv_names=None, curve_suffix="", use_absolute_times=False, butchered_clipping=[], combine_sides=True, pelvis_plot_only_right_side=False):
+    all_curves_for_this_person = {}
+    try:
+    #for i_file, file in enumerate(action_trials):
 
-                        side = l_r
-                        if ("pelvis" in joint_or_muscle_complete_name or "lumbar" in joint_or_muscle_complete_name) and combine_sides :
-                            side = -1
-                            logger.debug(xy_clippings_both[1])
-                        #    which_clippings = xy_clippings_both[1][file]
-                        #else:
-                            logger.debug(xy_clippings_both[l_r])
-                        #    which_clippings = xy_clippings_both[l_r][file]
+        for joint_or_muscle_name, ref_name in conv_names.items():
 
-                        pelvic_tilt_flipper = 1 ## we need this because the pelvis ik is a special case,
-                        
-                        if not np.abs(ref_name["offset"]) <= 0.1:
-                            logger.warning(f"OFFSET IS SET TO NONZERO VALUE {ref_name['offset']} FOR JOINT {ref_name['name']}. There are no good reasons for using this!")
-                        clipped_curves = clip_curve(
-                                data["time"],
-                                data[joint_or_muscle_complete_name]*ref_name["scale"][1]+ref_name["offset"],
-                                time_clips = which_clippings )
+            logger.debug(f"trying to find {joint_or_muscle_name}")
+            if joint_or_muscle_name+curve_suffix in data.columns:
+                joint_or_muscle_name_suffix = ["",""]
+            elif joint_or_muscle_name+"_l"+curve_suffix in data.columns and joint_or_muscle_name+"_r"+curve_suffix in data.columns:
+                joint_or_muscle_name_suffix = ["_l","_r"]
+            else:
+                logger.error(f"Could not find {joint_or_muscle_name} in source data!")
+                continue ## I think...
+            if ref_name["plot_it"]:
+                logger.debug(joint_or_muscle_name_suffix)
+                joint_or_muscle_complete_name = joint_or_muscle_name+joint_or_muscle_name_suffix[l_r]+curve_suffix
+                if not joint_or_muscle_complete_name in all_curves_for_this_person.keys():
+                    all_curves_for_this_person.update({joint_or_muscle_complete_name:([],"","")})
 
-                        corrected_clipped_curves = clipped_curves
-                        if "pelvis"  in joint_or_muscle_complete_name:
-                            logger.warning("ATTENTION: ASSUMING THAT I AM IK DATA AND ATTEMPTING FLIPS!")
-                            logger.debug(joint_or_muscle_complete_name)
-                            ##TODO: this will fail in other models that are not the 1992/2392/2354 etc
-                            pelvis_rot_ref = conv_names["pelvis_rotation"] ## i want the signal without any changes here??
-                            clipped_pelvis_rotation_raw = clip_curve(
-                                data["time"],
-                                data["pelvis_rotation"],
-                                time_clips = which_clippings )
-                            corrected_clipped_curves = detect_pelvis_rotation(clipped_curves, clipped_pelvis_rotation_raw,l_r, joint_or_muscle_complete_name, pelvis_plot_only_right_side)
+                side = l_r
+                if ("pelvis" in joint_or_muscle_complete_name or "lumbar" in joint_or_muscle_complete_name) and combine_sides :
+                    side = -1
+                    logger.debug(xy_clippings_both[1])
+                #    which_clippings = xy_clippings_both[1][file]
+                #else:
+                    logger.debug(xy_clippings_both[l_r])
+                #    which_clippings = xy_clippings_both[l_r][file]
+
+                pelvic_tilt_flipper = 1 ## we need this because the pelvis ik is a special case,
+                
+                if not np.abs(ref_name["offset"]) <= 0.1:
+                    logger.warning(f"OFFSET IS SET TO NONZERO VALUE {ref_name['offset']} FOR JOINT {ref_name['name']}. There are no good reasons for using this!")
+                clipped_curves = clip_curve(
+                        data_time,
+                        data[joint_or_muscle_complete_name]*ref_name["scale"][1]+ref_name["offset"],
+                        time_clips = which_clippings )
+
+                corrected_clipped_curves = clipped_curves
+                if "pelvis"  in joint_or_muscle_complete_name:
+                    logger.warning("ATTENTION: ASSUMING THAT I AM IK DATA AND ATTEMPTING FLIPS!")
+                    logger.debug(joint_or_muscle_complete_name)
+                    ##TODO: this will fail in other models that are not the 1992/2392/2354 etc
+                    pelvis_rot_ref = conv_names["pelvis_rotation"] ## i want the signal without any changes here??
+                    clipped_pelvis_rotation_raw = clip_curve(
+                        data_time,
+                        data["pelvis_rotation"],
+                        time_clips = which_clippings )
+                    corrected_clipped_curves = detect_pelvis_rotation(clipped_curves, clipped_pelvis_rotation_raw,l_r, joint_or_muscle_complete_name, pelvis_plot_only_right_side)
 
 
-                        
-                        
-                        xi,  curves = reshape_curves(normalize_steps(corrected_clipped_curves))
+                
+                
+                xi,  curves = reshape_curves(normalize_steps(corrected_clipped_curves))
 
-                        list_of_curves = all_curves_for_this_person[joint_or_muscle_complete_name][0]
-                        #import pickle
-                        #pickle.dump((xi,curves), open("/tmp/arg.p","wb"))
+                list_of_curves = all_curves_for_this_person[joint_or_muscle_complete_name][0]
+                #import pickle
+                #pickle.dump((xi,curves), open("/tmp/arg.p","wb"))
 
-                        if len(butchered_clipping) > 0 and len(butchered_clipping[l_r]) >= i_file and len(butchered_clipping[l_r][i_file]) >0:
-                            curves[butchered_clipping[l_r][i_file]] = np.roll(curves[butchered_clipping[l_r][i_file]], len(xi)//2,axis=1)
+                if len(butchered_clipping) > 0 and len(butchered_clipping[l_r]) >= i_file and len(butchered_clipping[l_r][i_file]) >0:
+                    curves[butchered_clipping[l_r][i_file]] = np.roll(curves[butchered_clipping[l_r][i_file]], len(xi)//2,axis=1)
 
-                        list_of_curves.append((xi,curves))
-                        logger.debug(f"list of curves for {joint_or_muscle_name}: {list_of_curves}")
-                        ##define side for plot:
-                        #if joint_or_muscle_suffix:
-                        #    side = l_r
-                        #else: ## pelvis or lumbar joints
-                        #    side = -1
-                        all_curves_for_this_person.update({joint_or_muscle_complete_name:(list_of_curves, ref_name,side)})
-                        logger.debug(f"I believe I have added {joint_or_muscle_name}")
+                list_of_curves.append((xi,curves))
+                logger.debug(f"list of curves for {joint_or_muscle_name}: {list_of_curves}")
+                ##define side for plot:
+                #if joint_or_muscle_suffix:
+                #    side = l_r
+                #else: ## pelvis or lumbar joints
+                #    side = -1
+                all_curves_for_this_person.update({joint_or_muscle_complete_name:(list_of_curves, ref_name,side)})
+                logger.debug(f"I believe I have added {joint_or_muscle_name}")
 
-            except:
-                traceback.print_exc()
-                logger.warning("failed in %s"%i_file)
-                pass
+    except:
+        traceback.print_exc()
+        logger.warning("failed in %s"%i_file)
+        pass
     if all_curves_for_this_person == {}:
         logger.error("No curves generated! Check source data")
     return all_curves_for_this_person
@@ -969,8 +976,7 @@ class TrialData:
         else: 
             return self.data.loc[:,cols].values
         
-        
-def generate_somejoint_or_muscle_curves(some_action_trials, skip_trials, curve_prefix="knee_angle", conv_names=None,left_or_right=0, curve_suffix="",use_absolute_times=False):
+def generate_somejoint_or_muscle_curves(some_action_trials, skip_trials, **kwargs):
     xy_joint_or_muscles = ({},{})
     for i_file, file in enumerate(some_action_trials):
         if i_file in skip_trials:
@@ -981,38 +987,44 @@ def generate_somejoint_or_muscle_curves(some_action_trials, skip_trials, curve_p
         #this_trial.trim_time(time_start[i_file], time_end[i_file] )
 
         data = this_trial.data
+        xy_joint_or_muscles = generate_somejoint_or_muscle_curves_meat(data,file, **kwargs)
+    return xy_joint_or_muscles
 
-        for joint_or_muscle_name, ref_name in conv_names.items():
-            if joint_or_muscle_name in data.columns:
-                joint_or_muscle_name_suffix = [""]
-            else:
-                joint_or_muscle_name_suffix = ["_l","_r"]
+        
+def generate_somejoint_or_muscle_curves_meat(data,file, curve_prefix="knee_angle", conv_names=None,left_or_right=0, curve_suffix="",use_absolute_times=False, xy_joint_or_muscles = ({},{})):
+    for joint_or_muscle_name, ref_name in conv_names.items():
+        if joint_or_muscle_name in data.columns:
+            joint_or_muscle_name_suffix = [""]
+        else:
+            joint_or_muscle_name_suffix = ["_l","_r"]
 
-            if ref_name["plot_it"]:
-                for l_r, joint_or_muscle_suffix in enumerate(joint_or_muscle_name_suffix):
-                    joint_or_muscle_complete_name = joint_or_muscle_name+joint_or_muscle_suffix + curve_suffix
+        if ref_name["plot_it"]:
+            for l_r, joint_or_muscle_suffix in enumerate(joint_or_muscle_name_suffix):
+                joint_or_muscle_complete_name = joint_or_muscle_name+joint_or_muscle_suffix + curve_suffix
 
-                    logger.info(joint_or_muscle_complete_name)
-                    logger.debug(joint_or_muscle_complete_name)
-                    if joint_or_muscle_complete_name==f"{curve_prefix}_r{curve_suffix}":
-                        y = data[joint_or_muscle_complete_name]*ref_name["scale"][1]
-                        x = data["time"]
-                        xy_joint_or_muscles[1].update({file:(x,y,[])})
-                    elif joint_or_muscle_complete_name==f"{curve_prefix}_l{curve_suffix}":
-                        y = data[joint_or_muscle_complete_name]*ref_name["scale"][1]
-                        x = data["time"]
-                        xy_joint_or_muscles[0].update({file:(x,y,[])})
-                    elif joint_or_muscle_complete_name==curve_prefix+curve_suffix:
-                        logger.debug("FORCE PLATE?")
-                        y = data[joint_or_muscle_complete_name]*ref_name["scale"][1]
-                        x = data["time"]
-                        xy_joint_or_muscles[left_or_right].update({file:(x,y,[])})
+                logger.info(joint_or_muscle_complete_name)
+                logger.debug(joint_or_muscle_complete_name)
+                if joint_or_muscle_complete_name==f"{curve_prefix}_r{curve_suffix}":
+                    y = data[joint_or_muscle_complete_name]*ref_name["scale"][1]
+                    x = data["time"]
+                    xy_joint_or_muscles[1].update({file:(x,y,[])})
+                elif joint_or_muscle_complete_name==f"{curve_prefix}_l{curve_suffix}":
+                    y = data[joint_or_muscle_complete_name]*ref_name["scale"][1]
+                    x = data["time"]
+                    xy_joint_or_muscles[0].update({file:(x,y,[])})
+                elif joint_or_muscle_complete_name==curve_prefix+curve_suffix:
+                    logger.debug("FORCE PLATE?")
+                    y = data[joint_or_muscle_complete_name]*ref_name["scale"][1]
+                    x = data["time"]
+                    xy_joint_or_muscles[left_or_right].update({file:(x,y,[])})
 
     return xy_joint_or_muscles
 
 
 def clip_curve(time, curve_val, time_clips = [(0.1,1.13),(1.13,2.2),(2.2,3.26),(3.26,4.39),(4.39,5.55)], PLOT_IT=False, add_frame_offset=0, use_frame_clips=None):
     actions = []
+
+    ## now it is only works with pandas, it was compatible with both, but nothing good ever lasts.
     non_actions = []
     if (not time_clips and not use_frame_clips) or (time_clips and use_frame_clips):
         logger.error("I need either time_clips or use_frame_clips , but not both")
@@ -1021,7 +1033,7 @@ def clip_curve(time, curve_val, time_clips = [(0.1,1.13),(1.13,2.2),(2.2,3.26),(
         #time is always increasing so this is trivial:
         for i, x_i in enumerate(time):
             if x_i>x:
-                return i
+                return int(i) ## idk
     logger.debug(time_clips)
     if time_clips:
         step_range =len(time_clips)-1
@@ -1029,18 +1041,21 @@ def clip_curve(time, curve_val, time_clips = [(0.1,1.13),(1.13,2.2),(2.2,3.26),(
         step_range =len(use_frame_clips)-1
 
     for i in range(step_range):
+        li = 0
+        ui = 0
         if time_clips:
+            #print(time_clips[i])
             li = get_index_of_time(time_clips[i][0])
             ui = get_index_of_time(time_clips[i][1])
         if use_frame_clips:
             li = use_frame_clips[i][0]-add_frame_offset
             ui = use_frame_clips[i][1]-add_frame_offset
 
-        logger.debug(li)
+        logger.debug(f"li:{li} ui:{ui}")
         logger.debug(time.values[li])
 
         xi = time[li:ui] #- time.values[li]
-        yi = curve_val[li:ui]
+        yi = curve_val.iloc[li:ui]
         actions.append((xi,yi))
     for i in range(step_range):
         if time_clips:
@@ -1051,7 +1066,7 @@ def clip_curve(time, curve_val, time_clips = [(0.1,1.13),(1.13,2.2),(2.2,3.26),(
             ui = use_frame_clips[i+1][0]-add_frame_offset
 
         xi = time[li:ui]
-        yi = curve_val[li:ui]
+        yi = curve_val.iloc[li:ui]
         non_actions.append((xi,yi))
     ## add beginning and end to non_actions:
     if time_clips:
@@ -1061,8 +1076,8 @@ def clip_curve(time, curve_val, time_clips = [(0.1,1.13),(1.13,2.2),(2.2,3.26),(
         a = use_frame_clips[0][0]-add_frame_offset
         b = use_frame_clips[-1][0]-add_frame_offset
 
-    non_actions.append((time[0:a],curve_val[0:a]))
-    non_actions.append((time[b:-1],curve_val[b:-1]))
+    non_actions.append((time[0:a],curve_val.iloc[0:a]))
+    non_actions.append((time[b:-1],curve_val.iloc[b:-1]))
     ## test if i did it correctly
     if PLOT_IT:
         fig, ax = plt.subplots()
@@ -1339,17 +1354,20 @@ def construct_step_segmentation_vector(some_steps):
 from copy import copy
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
-def each_side_plot(grf_, zero_time, grf_name_prefix = "1_ground_", side="Left", weight=None, plot_all=False, time_offset=0, plot_no_offset=True, nicer_plot=False, figax = None,
+def each_side_plot(grf_,zero_time, **kwargs):
+    grfdata = TrialData(grf_, remove_time_offset=False)
+    each_side_plot_meat(grfdata, grfdata.time, zero_time, **kwargs)
 
-        figsize=(18,4)):
+
+
+def each_side_plot_meat(grfdata, grfdata_time, zero_time, grf_name_prefix = "1_ground_", side="Left", weight=None, plot_all=False, time_offset=0, plot_no_offset=True, nicer_plot=False, figax = None, figsize=(18,4)):
     
-    grf = TrialData(grf_, remove_time_offset=False)
 
-    x_grf = np.array(list(grf.data.time-zero_time))
+    x_grf = np.array(list(grfdata_time-zero_time))
     x_grf_offset = copy(x_grf)
     x_grf_offset+= time_offset
 
-    steps_vec = find_steps(x_grf_offset,grf.data[f"{grf_name_prefix}force_vy"], weight)
+    steps_vec = find_steps(x_grf_offset,grfdata[f"{grf_name_prefix}force_vy"], weight)
 
     st_seg = construct_step_segmentation_vector(steps_vec)
     
@@ -1369,10 +1387,10 @@ def each_side_plot(grf_, zero_time, grf_name_prefix = "1_ground_", side="Left", 
     
     xsl, ysl, textstrl = gen_step_ticks(steps_vec, weight)
     
-    ax1.plot(x_grf,grf.data[f"{grf_name_prefix}force_py"],'r', label="py")
+    ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_py"],'r', label="py")
     if plot_all:
-        ax1.plot(x_grf,grf.data[f"{grf_name_prefix}force_px"],'g', label="px")
-        ax1.plot(x_grf,grf.data[f"{grf_name_prefix}force_pz"],'b', label="pz") 
+        ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_px"],'g', label="px")
+        ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_pz"],'b', label="pz") 
     
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
     handles, labels = ax1.get_legend_handles_labels()
@@ -1387,18 +1405,18 @@ def each_side_plot(grf_, zero_time, grf_name_prefix = "1_ground_", side="Left", 
         ax2.annotate(a_text[2],(a_text[0],a_text[1]))
     
     if plot_no_offset:
-        ax2.plot(x_grf,grf.data[f"{grf_name_prefix}force_vy"],'darkred', label="y")
-    ax2.plot(x_grf_offset,grf.data[f"{grf_name_prefix}force_vy"],'coral', label="y t_off=%f"%time_offset)
+        ax2.plot(x_grf,grfdata[f"{grf_name_prefix}force_vy"],'darkred', label="y")
+    ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vy"],'coral', label="y t_off=%f"%time_offset)
     if plot_all:
-        ax2.plot(x_grf_offset,grf.data[f"{grf_name_prefix}force_vx"],'lime', label="x")
-        ax2.plot(x_grf_offset,grf.data[f"{grf_name_prefix}force_vz"],'navy', label="z")
+        ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vx"],'lime', label="x")
+        ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vz"],'navy', label="z")
     
     handles, labels = ax2.get_legend_handles_labels()
     all_handles.extend(handles)
     all_labels.extend(labels)
 
 
-    plt.title(f"grf {side}: {grf_}")
+    plt.title(f"grf {side}: ")
     fig.legend(all_handles, all_labels)
     if nicer_plot:
         pass

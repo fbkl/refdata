@@ -50,13 +50,15 @@ def get_roted(this_df,in_degrees=True):
 
 
 def parse_header(this_file):
-    #print("=== IMU .STO FILE ===")
+    print(f"=== {this_file} FILE ===")
     skip_rows = 0
     scale = 180/np.pi
-    is_id = False
+    is_ik = False
     if "tau" in this_file:
         scale = 1
-        is_id = True
+        is_ik = False
+    if "ik.sto" in this_file:
+        is_ik = True
     with open(this_file, 'r') as f:
         for i in range(20):  # First 20 lines
             this_line = f.readline().rstrip()
@@ -67,50 +69,108 @@ def parse_header(this_file):
                 scale = 1
             if "time" in this_line and "moment" in this_line:
                 scale = 1
-                is_id = True
-    return skip_rows, scale, is_id
+                is_ik = False
+    return skip_rows, scale, is_ik
 
-class SyncedTrial:
-    def __init__(self, this_imu_file, this_mocap_file, lag = [] ):
+def valid(maybe_df):
+    if type(maybe_df) == type(pd.DataFrame()):
+        return True
+    else:
+        return False
+
+
+class SyncedTrials:
+    def __init__(self, imu_files, mocap_files, lag = [] ):
+        self.my_files = [imu_files, mocap_files]
+
+        self.master = False
+        self.min_size_ext = None
+
+        self.step_seg_l_list = []
+        self.step_seg_r_list = []
+
+
+        self.min_size_master = None
+        self.fig = None
+        if type(imu_files) == type(""):
+            imu_files = [imu_files]
+        if type(mocap_files) == type(""):
+            mocap_files = [mocap_files]
 
 
         self.scale_mocap = 180/np.pi
 
         self.scale_imu = 180/np.pi
-        is_id = False
-        # Inspect the files themselves
-        print(this_imu_file)
-        print(this_mocap_file)
-        if True:
-            #print("=== IMU .STO FILE ===")
-            imu_skip_rows = 0
-            with open(this_imu_file, 'r') as f:
-                for i in range(20):  # First 20 lines
-                    this_line = f.readline().rstrip()
-                    #print(f"{i}: {this_line}")
-                    if "endheader" in this_line:
-                        imu_skip_rows = i+1
-                    if "inDegrees=yes" in this_line:
-                        self.scale_imu = 1
-            #print("\n=== MOCAP .MOT FILE ===")
-            mocap_skip_rows = 0
-            with open(this_mocap_file, 'r') as f:
-                for i in range(20):
-                    this_line = f.readline().rstrip()
-                    #print(f"{i}: {this_line}")
-                    if "endheader" in this_line:
-                        mocap_skip_rows = i+1
-                    if "inDegrees=yes" in this_line:
-                        self.scale_mocap = 1
-        if "tau" in this_imu_file:
-            self.scale_mocap = 1
-            self.scale_imu = 1
-            is_id = True
+       
+        # the mocap pelvis has a different frame, we need to rename them :
+        ## this isnt working but whatever
+        rename_map_i = {
+            "pelvis_tilt": "pelvis_tilt_x",
+            "pelvis_list": "pelvis_obliquity",
+            "pelvis_rotation": "pelvis_rotation"
+        }
         
-        # Load IMU .sto files (OpenSim format)
-        imu_data = pd.read_csv(this_imu_file, delimiter='\t', skiprows=imu_skip_rows)  
-        # Load Vicon .mot files
-        mocap_data = pd.read_csv(this_mocap_file, delimiter='\t', skiprows=mocap_skip_rows)
+        rename_map_m = {
+            "pelvis_tilt": "pelvis_tilt_x",
+            "pelvis_list": "pelvis_obliquity",
+            "pelvis_rotation": "pelvis_rotation"
+        }
+
+
+        is_ik = False
+
+        t_starts = []
+        t_ends = []
+
+        imu_data = [None for i in range(len(imu_files))]
+
+        for i, this_imu_file in enumerate(imu_files):
+            if not this_imu_file:
+                continue
+            imu_skip_rows, self.scale_imu, is_ik = parse_header(this_imu_file)
+            # Load IMU .sto files (OpenSim format)
+            imu_data[i] = pd.read_csv(this_imu_file, delimiter='\t', skiprows=imu_skip_rows)  
+            if "tau" in this_imu_file: ## i assume is id
+                for col in imu_data[i].columns:
+                    if col == "time":
+                        continue
+                    imu_data[i] = imu_data[i].rename(columns={col:col+"_moment"})
+            imu_data[i] = imu_data[i].rename(columns=rename_map_i)
+            # Get the first timestamp
+            t0 = imu_data[i]["time"].iloc[0]  # .iloc[0] not .index[0]
+
+            # Subtract offset
+            imu_data[i]["time"] = imu_data[i]["time"] - t0
+
+            # NOW set it as index
+            imu_data[i] = imu_data[i].set_index("time")
+
+            t_starts.append(imu_data[i].index[0])
+            t_ends.append(imu_data[i].index[-1])
+            
+        mocap_data = [None for i in range(len(mocap_files))]
+
+        self.mask_mocap = None
+        for i, this_mocap_file in enumerate(mocap_files):
+            if not this_mocap_file:
+                continue
+            mocap_skip_rows, self.scale_mocap, is_ik = parse_header(this_mocap_file)
+
+            # Load Vicon .mot files
+            mocap_data[i] = pd.read_csv(this_mocap_file, delimiter='\t', skiprows=mocap_skip_rows)
+            mocap_data[i] = mocap_data[i].rename(columns=rename_map_m)
+            # i want to save the mocap data begining and end. when i dont have mocap, i dont have a reference. 
+            # if i compare to padded values im messing things up
+            # so after everything is done I will use this to slice the output
+
+            self.mask_mocap = [mocap_data[i]["time"].iloc[0], mocap_data[i]["time"].iloc[-1]]
+            print(f"mocap time mask (only beginning and end, if there are also nans in the middle this will fail)\n  {self.mask_mocap}")
+
+            # mocap is already at wall time
+            mocap_data[i] = mocap_data[i].set_index('time')
+            
+            t_starts.append(mocap_data[i].index[0])
+            t_ends.append(mocap_data[i].index[-1])
 
         # plot them raw
         if False: # this has time as a column, so it will show epoch times as something to 10⁹... not great
@@ -118,51 +178,7 @@ class SyncedTrial:
             mocap_data.plot()
             plt.show()
 
-        # the mocap pelvis has a different frame, we need to rename them :
-
-        rename_map_i = {
-            "pelvis_tilt": "pelvis_tilt_x",
-            "pelvis_list": "pelvis_obliquity",
-            "pelvis_rotation": "pelvis_rotation"
-        }
-
-        if is_id:
-            for col in imu_data.columns:
-                if col == "time":
-                    continue
-                imu_data = imu_data.rename(columns={col:col+"_moment"})
-        imu_data = imu_data.rename(columns=rename_map_i)
-        #imu_data = get_roted(imu_data)
-
-        rename_map_m = {
-            "pelvis_tilt": "pelvis_tilt_x",
-            "pelvis_list": "pelvis_obliquity",
-            "pelvis_rotation": "pelvis_rotation"
-        }
-
-        mocap_data = mocap_data.rename(columns=rename_map_m)
-        #mocap_data = get_roted(mocap_data)
-
-
-        # Get the first timestamp
-        t0 = imu_data["time"].iloc[0]  # .iloc[0] not .index[0]
-
-        # Subtract offset
-        imu_data["time"] = imu_data["time"] - t0
-
-        # NOW set it as index
-        imu_data = imu_data.set_index("time")
-
-        
-        # i want to save the mocap data begining and end. when i dont have mocap, i dont have a reference. 
-        # if i compare to padded values im messing things up
-        # so after everything is done I will use this to slice the output
-
-        self.mask_mocap = [mocap_data["time"].iloc[0], mocap_data["time"].iloc[-1]]
-        print(f"mocap time mask (only beginning and end, if there are also nans in the middle this will fail)  {self.mask_mocap}")
-
-        # mocap is already at wall time
-        mocap_data = mocap_data.set_index('time')
+  
         
         # plot them as wall timed
         if False: 
@@ -174,27 +190,44 @@ class SyncedTrial:
         # Create a common time base - use the overlapping period
         # Say 100 Hz exactly
         fs = 100  # Hz
-        self.t_start = min(imu_data.index[0], mocap_data.index[0])
-        self.t_end = max(imu_data.index[-1], mocap_data.index[-1])
+        self.t_start = min(t_starts)
+        self.t_end = max(t_ends)
 
         print(self.t_start, self.t_end)
         common_time = np.arange(self.t_start, self.t_end, 1/fs)
-        self.imu_resampled = imu_data.reindex(common_time, method='nearest').interpolate(method='linear')
-        self.mocap_resampled = mocap_data.reindex(common_time, method='nearest').interpolate(method='linear')
+        if valid(imu_data[0]):
+            self.imu_resampled = imu_data[0].reindex(common_time, method='nearest').interpolate(method='linear')
+        else:
+            self.imu_resampled = None
+        if valid(mocap_data[0]):
+            self.mocap_resampled = mocap_data[0].reindex(common_time, method='nearest').interpolate(method='linear')
+        else:
+            self.mocap_resampled = None
 
-        all_common_joints = [col for col in self.imu_resampled.columns if col in self.mocap_resampled.columns]
-        # but we exclude the translations
-        self.common_joints = []
-        for joint in all_common_joints:
-            if "_tx" == joint[-3:] or "_ty" == joint[-3:] or "_tz" == joint[-3:]:
-                pass
-            else:
-                self.common_joints.append(joint)
+        if valid(imu_data[0]) and valid(mocap_data[0]):
+            logger.warning("this should be done with a mapped one to one, easier said then done though")
+            all_common_joints = [col for col in self.imu_resampled.columns if col in self.mocap_resampled.columns]
+            # but we exclude the translations
+            self.common_joints = []
+            for joint in all_common_joints:
+                if "_tx" == joint[-3:] or "_ty" == joint[-3:] or "_tz" == joint[-3:]:
+                    pass
+                else:
+                    self.common_joints.append(joint)
+        elif valid(imu_data[0]):
+            self.common_joints = imu_data[0].columns
+        elif valid(mocap_data[0]):
+            self.common_joints = mocap_data[0].columns
+        else:
+            self.common_joints = []
+    
         #common_joints
 
-        if not is_id:
-            self.imu_resampled = get_roted(self.imu_resampled, in_degrees=False)
-            self.mocap_resampled = get_roted(self.mocap_resampled)
+        if is_ik:
+            if valid(self.imu_resampled):
+                self.imu_resampled = get_roted(self.imu_resampled, in_degrees=False)
+            if valid(self.mocap_resampled):
+                self.mocap_resampled = get_roted(self.mocap_resampled)
 
 
         ### this is the time shifting, should be a function, but i am corrupting the mocap_resampled and the mask_mocap so we cant add another slider to change it the way it is. 
@@ -229,12 +262,31 @@ class SyncedTrial:
             self.time_offset = lag_samples / fs #+ 2* mask_mocap[0]
 
             print(lag_samples)
+        else:
+            self.time_offset = lag
+
+        if self.mask_mocap:
+            # we have to update the mocap mask to include the delay
+            self.mask_mocap = [self.mask_mocap[0]+self.time_offset, self.mask_mocap[1]+self.time_offset]
         
-        # we have to update the mocap mask to include the delay
-        self.mask_mocap = [self.mask_mocap[0]+self.time_offset, self.mask_mocap[1]+self.time_offset]
+        if valid(self.mocap_resampled):
+            # Apply the offset to one of them (let's shift mocap to match IMU timeline)
+            self.mocap_resampled.index = self.mocap_resampled.index + self.time_offset
+
+        self.all_imu_resampled = [None for i in range(len(imu_files))]
+        self.all_mocap_resampled = [None for i in range(len(mocap_files))]
         
-        # Apply the offset to one of them (let's shift mocap to match IMU timeline)
-        self.mocap_resampled.index = self.mocap_resampled.index + self.time_offset
+        for i, imu_datai in enumerate(imu_data):
+            if valid(imu_datai):
+                self.all_imu_resampled[i] = imu_datai.reindex(common_time, method='nearest').interpolate(method='linear')
+        for i, mocap_datai in enumerate(mocap_data):
+            if valid(mocap_datai):
+                self.all_mocap_resampled[i] = mocap_datai.reindex(common_time, method='nearest').interpolate(method='linear')
+                self.all_mocap_resampled[i].index += self.time_offset
+
+    def mask_from(self,ik_strial):
+        self.mask_mocap = ik_strial.mask_mocap
+        self.min_size_ext = ik_strial.min_size_master
 
     def create_controls(self):
 
@@ -292,6 +344,9 @@ class SyncedTrial:
         #self.fig.tight_layout()
         self.axs.flatten()
 
+
+
+
     def rebork(self,*args):
         #plt.plot(total_xcorr) ## not sure how to interpret this anyways,,, it start with one trial with just one sample in common i think, like full whole length of time of one trial offset
         #plt.show()
@@ -300,44 +355,81 @@ class SyncedTrial:
         ## this shows the time correction, should be good.
         for joint, ax in zip( self.common_joints, self.axs):
             ax.clear()
-            imu_signal = self.imu_resampled[joint]*self.scale_imu
-            mocap_signal = self.mocap_resampled[joint]*self.scale_mocap
-            ax.plot(self.imu_resampled.index, imu_signal, label="imu")
-            ax.plot(self.mocap_resampled.index, mocap_signal, label="mocap")
+            #logger.warning("what should i plot here, idk...")
+            if valid(self.imu_resampled):
+                imu_signal = self.imu_resampled[joint]*self.scale_imu
+                ax.plot(self.imu_resampled.index, imu_signal, label="imu")
+            if valid(self.mocap_resampled):
+                mocap_signal = self.mocap_resampled[joint]*self.scale_mocap
+                ax.plot(self.mocap_resampled.index, mocap_signal, label="mocap")
             ax.legend()
-            ax.axvline(self.mask_mocap[0], color="r")
-            ax.axvline(self.mask_mocap[1], color="r")
+            ax.axvline(self.mask_mocap[0], color="g")
+            ax.axvline(self.mask_mocap[1], color="g")
+
             ax.set_title(joint)
+        valid_l = []
+        valid_r = []
+        for lefties in self.step_seg_l_list[:-1]:
+            style = ":" if lefties[0] < self.mask_mocap[0] or lefties[1] > self.mask_mocap[1] else "-"
+            for ax in self.axs:
+                ax.axvline(lefties[0],color="r", ls=style)
+                ax.axvline(lefties[1],color="r", ls=style)
+            if style == "-":
+                ## then we add this one
+                valid_l.append(lefties)
+        for righties in  self.step_seg_r_list[:-1]:
+            style = ":" if righties[0] < self.mask_mocap[0] or righties[1] > self.mask_mocap[1] else "-"
+            for ax in self.axs:
+                ax.axvline(righties[0],color="b", ls=style)
+                ax.axvline(righties[1],color="b", ls=style)
+            if style == "-":
+                ## then we add this one
+                valid_r.append(righties)
         plt.show()
 
 
         # NOW trim to overlapping region
-        self.t_start = max(self.imu_resampled.index[0], self.mocap_resampled.index[0])
-        self.t_end = min(self.imu_resampled.index[-1], self.mocap_resampled.index[-1])
+ 
+        if self.master:
+            self.t_start = max(self.imu_resampled.index[0], self.mocap_resampled.index[0])
+            self.t_end = min(self.imu_resampled.index[-1], self.mocap_resampled.index[-1])
 
         imu_synced = self.imu_resampled.loc[self.t_start:self.t_end]
-        mocap_synced = self.mocap_resampled.loc[self.t_start:self.t_end]
-
         # now we mask to the times where mocap is available
         imu_synced = imu_synced.loc[self.mask_mocap[0]:self.mask_mocap[1]]
-        mocap_synced = mocap_synced.loc[self.mask_mocap[0]:self.mask_mocap[1]]
         
-        # we then slice it to make sure they are the same length
-        min_size = min(len(imu_synced),len(mocap_synced))
+        mocap_synced = []
+        if valid(self.mocap_resampled):
+            mocap_synced = self.mocap_resampled.loc[self.t_start:self.t_end]
+            mocap_synced = mocap_synced.loc[self.mask_mocap[0]:self.mask_mocap[1]]
+        
+        if self.master:
+            # we then slice it to make sure they are the same length
+            min_size = min(len(imu_synced),len(mocap_synced))
+            self.min_size_master = min_size
+        else:
+            min_size = self.min_size_ext
 
         imu_synced = imu_synced.iloc[:min_size]
-        mocap_synced = mocap_synced.iloc[:min_size]
+        if valid(mocap_synced):
+            mocap_synced = mocap_synced.iloc[:min_size]
+            # Sanity check
+            print(f"Synced length: {len(imu_synced)} == {len(mocap_synced)}")
+            assert(len(imu_synced) == len(mocap_synced))
+            print(f"Time range: {imu_synced.index[0]:.3f} to {imu_synced.index[-1]:.3f}")
+            self.mocap_block = mocap_synced.reset_index(drop=True)
+        else:
+            self.mocap_block = None
     
         print(f"offset: {self.time_offset}")
-        # Sanity check
-        print(f"Synced length: {len(imu_synced)} == {len(mocap_synced)}")
-        assert(len(imu_synced) == len(mocap_synced))
-        print(f"Time range: {imu_synced.index[0]:.3f} to {imu_synced.index[-1]:.3f}")
 
         self.imu_block  = imu_synced.reset_index(drop=True)
-        self.mocap_block = mocap_synced.reset_index(drop=True)
     def __del__(self):
-        plt.close(self.fig)
+        print("why are you deleting me?")
+        print(self.my_files)
+        if self.fig:
+
+            plt.close(self.fig)
 
 def run_analysis(imu_ik_trials, vicon_ik_trials, lag=None):
 

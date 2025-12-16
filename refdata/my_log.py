@@ -29,10 +29,21 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+import pprint
+def myprint(var):
+    nicevar = pprint.pformat(globals()[var], indent=1 , width=100)
+    logger.debug(f"{var}:\n{nicevar}")
+
+
+def myprint2(var):
+    logger.debug(f"{var}:\n{globals()[var]}")
+
+import inspect
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
+logger.handlers.clear()
 # create console handler with a higher log level
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
@@ -40,4 +51,33 @@ ch.setLevel(logging.DEBUG)
 ch.setFormatter(CustomFormatter())
 
 logger.addHandler(ch)
+logger.propagate = False
+
+from rich.logging import RichHandler
+logging.basicConfig(format='%(funcName)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S', 
+                    handlers=[RichHandler()],
+                    level=logging.INFO)
+
+def vlog(var_name: str, level=logging.INFO):
+    """Log a variable with its name and value from the caller's scope"""
+    # Get the caller's frame
+    frame = inspect.currentframe().f_back
+    
+    # Try to find the variable in caller's locals first, then globals
+    try:
+        if var_name in frame.f_locals:
+            value = frame.f_locals[var_name]
+        elif var_name in frame.f_globals:
+            value = frame.f_globals[var_name]
+        else:
+            logger.error(f"Variable '{var_name}' not found in caller's scope")
+            return
+        
+        nicevar = pprint.pformat(repr(value), indent=1 , width=100)
+        
+        logging.log(level, f"{var_name}: {nicevar}")
+    finally:
+        # Clean up frame reference to avoid reference cycles
+        del frame
 

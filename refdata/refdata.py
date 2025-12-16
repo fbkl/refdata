@@ -582,7 +582,7 @@ def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, al
                         time_clips = which_clippings )
 
                 corrected_clipped_curves = clipped_curves
-                if "pelvis"  in joint_or_muscle_complete_name:
+                if False and "pelvis"  in joint_or_muscle_complete_name:
                     logger.warning("ATTENTION: ASSUMING THAT I AM IK DATA AND ATTEMPTING FLIPS!")
                     logger.debug(joint_or_muscle_complete_name)
                     ##TODO: this will fail in other models that are not the 1992/2392/2354 etc

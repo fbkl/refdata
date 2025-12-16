@@ -16,10 +16,13 @@ PB = "pelvis_list"
 
 from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output, Layout
 
-def get_roted(this_df,in_degrees=True):
+def get_roted(this_df,in_degrees=False):
+    logger.info("="*80)
+    logger.info("rotating now")
+    logger.info("="*80)
     initial_rotation = this_df['pelvis_rotation'].iloc[0]
 
-    R_correction = R.from_euler('z', initial_rotation, degrees=in_degrees).inv()
+    R_correction = R.from_euler('y', initial_rotation, degrees=in_degrees).inv()
 
     angles = []
     for i in range(len(this_df)):
@@ -27,10 +30,10 @@ def get_roted(this_df,in_degrees=True):
         obl = this_df[PB].iloc[i]
         rot = this_df['pelvis_rotation'].iloc[i]
 
-        R_current = R.from_euler('zyx', [rot, obl, tilt], degrees=in_degrees)
+        R_current = R.from_euler('zxy', [obl, rot, tilt], degrees=in_degrees)
         R_correct = R_correction * R_current
         
-        corrected = R_correct.as_euler('zyx', degrees=in_degrees)
+        corrected = R_correct.as_euler('zxy', degrees=in_degrees)
         angles.append(corrected)
     angles = np.array(angles)
     
@@ -43,11 +46,11 @@ def get_roted(this_df,in_degrees=True):
     
     if False and angles[0,1] < 0:
         
-        this_df[PB] = -angles[:,1]
+        this_df[PB] = -angles[:,0]
     else:
-        this_df[PB] = angles[:,1] 
+        this_df[PB] = angles[:,0] 
         
-    this_df['pelvis_rotation'] = angles[:,0] 
+    this_df['pelvis_rotation'] = angles[:,1] 
     
     
     
@@ -85,7 +88,7 @@ def valid(maybe_df):
 
 
 class SyncedTrials:
-    def __init__(self, imu_files, mocap_files, lag = [] ):
+    def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False):
         self.my_files = [imu_files, mocap_files]
 
         self.curve_suffix = ""
@@ -123,7 +126,7 @@ class SyncedTrials:
         }
 
 
-        is_ik = False
+        #is_ik = False ##i'll just tell it, wth
 
         t_starts = []
         t_ends = []
@@ -133,7 +136,7 @@ class SyncedTrials:
         for i, this_imu_file in enumerate(imu_files):
             if not this_imu_file:
                 continue
-            imu_skip_rows, self.scale_imu, is_ik = parse_header(this_imu_file)
+            imu_skip_rows, self.scale_imu, _ = parse_header(this_imu_file)
             # Load IMU .sto files (OpenSim format)
             imu_data[i] = pd.read_csv(this_imu_file, delimiter='\t', skiprows=imu_skip_rows)  
             if "tau" in this_imu_file: ## i assume is id
@@ -163,7 +166,7 @@ class SyncedTrials:
         for i, this_mocap_file in enumerate(mocap_files):
             if not this_mocap_file:
                 continue
-            mocap_skip_rows, self.scale_mocap, is_ik = parse_header(this_mocap_file)
+            mocap_skip_rows, self.scale_mocap, _ = parse_header(this_mocap_file)
 
             # Load Vicon .mot files
             mocap_data[i] = pd.read_csv(this_mocap_file, delimiter='\t', skiprows=mocap_skip_rows)
@@ -242,10 +245,15 @@ class SyncedTrials:
         #common_joints
 
         if is_ik:
+            logger.info(f"I am ik and will try to get_roted {repr(self.my_files)}")
             if valid(self.imu_resampled):
-                self.imu_resampled = get_roted(self.imu_resampled, in_degrees=False)
+                logger.info("imu is valid attemptinf rotation")
+                self.imu_resampled = get_roted(self.imu_resampled)
             if valid(self.mocap_resampled):
+                logger.info("mocap is valid attemptinf rotation")
                 self.mocap_resampled = get_roted(self.mocap_resampled)
+        else:
+            logger.info(f"I am NOT ik and will NOT try to get_roted {repr(self.my_files)}")
 
 
         ### this is the time shifting, should be a function, but i am corrupting the mocap_resampled and the mask_mocap so we cant add another slider to change it the way it is. 
@@ -663,7 +671,7 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
     #with all the data from all the sources okay
     def __init__(self, imuLump, mocapLump, weight):
         self.weight = weight
-        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head) ## this will be automatically synced
+        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True) ## this will be automatically synced
         self.ik.master = True
         self.lag = self.ik.time_offset
         self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag)

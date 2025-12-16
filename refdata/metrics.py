@@ -57,7 +57,7 @@ def get_roted(this_df,in_degrees=True):
 def parse_header(this_file):
     print(f"=== {this_file} FILE ===")
     skip_rows = 0
-    scale = 180/np.pi
+    scale = 1
     is_ik = False
     if "tau" in this_file:
         scale = 1
@@ -71,7 +71,7 @@ def parse_header(this_file):
             if "endheader" in this_line:
                 skip_rows = i+1
             if "inDegrees=yes" in this_line:
-                scale = 1
+                scale = np.pi/180
             if "time" in this_line and "moment" in this_line:
                 scale = 1
                 is_ik = False
@@ -184,6 +184,9 @@ class SyncedTrials:
                 logger.info("regularizing mocap data")
                 mocap_data[i] *= self.scale_mocap
                 self.scale_mocap = 1 
+            else:
+                logger.info("mocap data didnt need fixing???")
+
             t_starts.append(mocap_data[i].index[0])
             t_ends.append(mocap_data[i].index[-1])
 

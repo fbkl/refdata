@@ -1,6 +1,8 @@
 __pycache__/*
 refdata/__pycache__/*
+refdata/.ipynb_checkpoints/*
 scripts/__pycache__/*
 scripts/output/*
 scripts/output_pruned/*
 data/grf_data/*.csv
+venv/*

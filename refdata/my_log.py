@@ -76,7 +76,7 @@ def vlog(var_name: str, level=logging.INFO):
         
         nicevar = pprint.pformat(repr(value), indent=1 , width=100)
         
-        logging.log(level, f"{var_name}: {nicevar}")
+        logging.log(level, f"{var_name}:\n{nicevar}")
     finally:
         # Clean up frame reference to avoid reference cycles
         del frame

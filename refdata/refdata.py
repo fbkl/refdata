@@ -560,6 +560,9 @@ def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, al
             if ref_name["plot_it"]:
                 logger.debug(joint_or_muscle_name_suffix)
                 joint_or_muscle_complete_name = joint_or_muscle_name+joint_or_muscle_name_suffix[l_r]+curve_suffix
+                if ("pelvis"  in joint_or_muscle_complete_name or "lumbar" in joint_or_muscle_complete_name) and not l_r:
+                    logger.info(f"skipping {joint_or_muscle_complete_name} {l_r}")
+                    continue
                 if not joint_or_muscle_complete_name in all_curves_for_this_person.keys():
                     all_curves_for_this_person.update({joint_or_muscle_complete_name:([],"","")})
 
@@ -572,8 +575,6 @@ def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, al
                     #logger.debug(xy_clippings_both[l_r])
                 #    which_clippings = xy_clippings_both[l_r][file]
 
-                pelvic_tilt_flipper = 1 ## we need this because the pelvis ik is a special case,
-                
                 if not np.abs(ref_name["offset"]) <= 0.1:
                     logger.warning(f"OFFSET IS SET TO NONZERO VALUE {ref_name['offset']} FOR JOINT {ref_name['name']}. There are no good reasons for using this!")
                 clipped_curves = clip_curve(
@@ -612,7 +613,11 @@ def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, al
                 #    side = l_r
                 #else: ## pelvis or lumbar joints
                 #    side = -1
-                all_curves_for_this_person.update({joint_or_muscle_complete_name:(list_of_curves, ref_name,side)})
+                if ("pelvis"  in joint_or_muscle_complete_name or "lumbar" in joint_or_muscle_complete_name) and not l_r:
+                    logger.info(f"skipping {joint_or_muscle_complete_name} {l_r}")
+                    pass
+                else:
+                    all_curves_for_this_person.update({joint_or_muscle_complete_name:(list_of_curves, ref_name,side)})
                 logger.debug(f"I believe I have added {joint_or_muscle_name}")
 
     except:

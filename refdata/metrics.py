@@ -7,6 +7,8 @@ from . import my_log
 
 logger = my_log.logger
 
+vv = my_log.vlog
+
 logger.info("Loading metrics")
 
 PA = "pelvis_tilt"
@@ -16,42 +18,159 @@ PB = "pelvis_list"
 
 from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output, Layout
 
-def get_roted(this_df,in_degrees=False):
-    logger.info("="*80)
-    logger.info("rotating now")
-    logger.info("="*80)
+def get_roted(this_df, in_degrees=False):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]
-
-    R_correction = R.from_euler('y', initial_rotation, degrees=in_degrees).inv()
-
+    
+    # Global Y-axis correction
+    R_correction = R.from_euler('Y', -initial_rotation, degrees=in_degrees)
+    
     angles = []
     for i in range(len(this_df)):
         tilt = this_df[PA].iloc[i]
         obl = this_df[PB].iloc[i]
         rot = this_df['pelvis_rotation'].iloc[i]
-
-        R_current = R.from_euler('zxy', [obl, rot, tilt], degrees=in_degrees)
-        R_correct = R_correction * R_current
         
-        corrected = R_correct.as_euler('zxy', degrees=in_degrees)
+        # Build rotation using EXTRINSIC ZYX
+        R_current = R.from_euler('ZYX', [tilt, rot, obl], degrees=in_degrees)
+        
+        # Apply correction IN SPACE FRAME (left multiply)
+        R_corrected = R_correction * R_current
+        
+        # Extract back as ZYX EXTRINSIC
+        corrected = R_corrected.as_euler('ZYX', degrees=in_degrees)
+        angles.append(corrected)
+    
+    angles = np.array(angles)
+    
+    this_df[PA] = angles[:,0]  # tilt
+    this_df['pelvis_rotation'] = angles[:,1]  # rotation  
+    this_df[PB] = angles[:,2]  # list
+    
+    return this_df
+
+
+def get_rotedi2(this_df, in_degrees=False):
+    initial_rotation = this_df['pelvis_rotation'].iloc[0]
+    
+    # Determine if we need +90 or -90 correction
+    if abs(initial_rotation - 90) < abs(initial_rotation - (-90)):
+        # Mocap is +90° off
+        correction = 90
+    else:
+        # Mocap is -90° off
+        correction = -90
+    
+    if in_degrees:
+        correction_rad = np.radians(correction)
+    else:
+        correction_rad = correction
+    
+    this_df_copy = this_df.copy()
+    
+    if abs(correction_rad - np.pi/2) < 0.1:  # +90 degrees
+        # Swap tilt and list, adjust signs
+        this_df_copy[PA] = -this_df[PB].values  # tilt = -list
+        this_df_copy[PB] = this_df[PA].values   # list = tilt
+        this_df_copy['pelvis_rotation'] = this_df['pelvis_rotation'].values - correction
+        
+    elif abs(correction_rad + np.pi/2) < 0.1:  # -90 degrees
+        # Swap tilt and list, adjust signs
+        this_df_copy[PA] = this_df[PB].values   # tilt = list
+        this_df_copy[PB] = -this_df[PA].values  # list = -tilt
+        this_df_copy['pelvis_rotation'] = this_df['pelvis_rotation'].values - correction
+    
+    return this_df_copy
+
+
+
+def get_roted1(this_df, in_degrees=False):
+    initial_rotation = this_df['pelvis_rotation'].iloc[0]
+   
+    if np.abs(initial_rotation) < 10*np.pi/180: ## smaller than pm 10 degrees we do nothing
+        logger.info(f"very small initial rotation {initial_rotation} so im not fixing it")
+        return this_df
+    # Global Y-axis correction (±90°)
+    R_correction = R.from_euler('Y', -initial_rotation, degrees=in_degrees)
+    
+    angles = []
+    for i in range(len(this_df)):
+        tilt = this_df[PA].iloc[i]
+        obl = this_df[PB].iloc[i]
+        rot = this_df['pelvis_rotation'].iloc[i]
+        
+        # SPACE rotation sequence: Z(tilt), Y(rotation), X(list)
+        R_current = R.from_euler('ZYX', [tilt, rot, obl], degrees=in_degrees)
+        
+        R_corrected = R_correction * R_current
+        
+        corrected = R_corrected.as_euler('ZYX', degrees=in_degrees)
+        angles.append(corrected)
+    
+    angles = np.array(angles)
+    
+    this_df[PA] = angles[: ,0]  # tilt
+    this_df['pelvis_rotation'] = angles[:,1]  # rotation
+    this_df[PB] = angles[:,2]  # list
+    
+    return this_df
+
+
+def get_roted0(this_df,in_degrees=False):
+    return this_df
+
+    logger.info("="*80)
+    logger.info("rotating now")
+    logger.info("="*80)
+    initial_rotation = this_df['pelvis_rotation'].iloc[0]
+
+    vv('initial_rotation')
+    R_correction = R.from_euler('Y', -initial_rotation, degrees=in_degrees)
+    #R_correctionA = R.from_euler('x', initial_rotation, degrees=in_degrees).inv()
+    #R_correctionB = R.from_euler('y', initial_rotation, degrees=in_degrees).inv()
+    #R_correctionC = R.from_euler('z', initial_rotation, degrees=in_degrees).inv()
+
+    angles = []
+    for i in range(len(this_df)):
+        tilt = this_df[PA].iloc[i]
+        obl = this_df[PB].iloc[i]
+        rotation = this_df['pelvis_rotation'].iloc[i]
+
+        # For SPACE (extrinsic) rotations matching your C++ code:
+        # Order: Z(tilt), Y(rotation), X(list)
+        R_current = R.from_euler('ZYX', [tilt, rotation, obl], degrees=in_degrees)
+        #R_current = R.from_euler('zxy', [obl, rot, tilt], degrees=in_degrees)
+        #R_correct = R_correction * R_current
+        #R_a = R.from_euler('y', rot, degrees=in_degrees)
+        #R_b = R.from_euler('x', obl, degrees=in_degrees)
+        #R_c = R.from_euler('z', tilt, degrees=in_degrees)
+
+        R_corrected = R_correction * R_current
+        #R_correctB = R_correctionB * R_current
+        #R_correctC = R_correctionC * R_current
+        
+        corrected = R_corrected.as_euler('ZYX', degrees=in_degrees)
+        #correctedA = R_correctA.as_euler('zxy', degrees=in_degrees)
+        #correctedB = R_correctB.as_euler('zxy', degrees=in_degrees)
+        #correctedC = R_correctC.as_euler('zxy', degrees=in_degrees)
+        
+        if i == 0:
+            logger.info("try to make sense of this")
+            #print([obl, rotation, tilt])
+            vv('R_current')
+            #print(R_a*R_b*R_c)
+            #print(R_c*R_b*R_a)
+            vv('R_corrected')
+            #vv('R_correctB')
+            #vv('R_correctC')
+            vv('corrected')
+            #vv('correctedB')
+            #vv('correctedC')
         angles.append(corrected)
     angles = np.array(angles)
     
-    ## we invert pelvis_tilt manually i am doing something wrong here
-    if False and angles[0,2] < 0:
-        
-        this_df[PA] = -angles[:,2]
-    else:
-        this_df[PA] = angles[:,2]
-    
-    if False and angles[0,1] < 0:
-        
-        this_df[PB] = -angles[:,0]
-    else:
-        this_df[PB] = angles[:,0] 
-        
-    this_df['pelvis_rotation'] = angles[:,1] 
-    
+    this_df[PA] = angles[: ,0]  # tilt
+    this_df['pelvis_rotation'] = angles[:,1]  # rotation
+    this_df[PB] = angles[:,2]  # list
     
     
     return this_df
@@ -414,6 +533,14 @@ class SyncedTrials:
             if style == "-":
                 ## then we add this one
                 valid_r.append(righties)
+        valid_l.append(self.step_seg_l_list[-1])
+        valid_r.append(self.step_seg_r_list[-1])
+        print(valid_l)
+        print(valid_r)
+        if True:
+            self.step_seg_l_list = valid_l
+            self.step_seg_r_list = valid_r
+
         plt.show()
 
 
@@ -510,7 +637,7 @@ class Dismissed():
                 this_file_name = [stli.my_files[1],stri.my_files[1]]
 
             for l_r, (data_i, which_clippings) in enumerate(zip([stlis, stris],(stli.step_seg_l_list, stri.step_seg_r_list))):
-                all_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, all_curves_for_this_person, ref=ref, conv_names=conv_names))
+                all_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, all_curves_for_this_person, ref=ref, conv_names=conv_names, pelvis_plot_only_right_side=True, combine_sides=False))
         return all_curves_for_this_person
 
     def get_strials(self, gtype):

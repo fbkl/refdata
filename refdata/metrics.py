@@ -445,16 +445,20 @@ class SyncedTrials:
 
     def generate_sided_mask(self):
         #
-        self.sided_mask = [[],[]]
         for side, (valid_steps_lr, step_segs_lr) in enumerate(zip([self.valid_steps_l, self.valid_steps_r], [self.step_seg_l_list, self.step_seg_r_list] )):
             ## we may not have a single valid step, in this case we want to set the whole mask to false, but we want the mask to exist, i guess
             side_string = "_r" if side else "_l"
             self.imu_block[f"mask{side_string}"] = False
             self.mocap_block[f"mask{side_string}"] = False
-            if valid_steps_lr:
-                for step in step_segs_lr:
+            for step, is_valid in zip(step_segs_lr,valid_steps_lr):
+                if is_valid:
                     self.imu_block.loc[step[0]: step[1], f"mask{side_string}"] = True
                     self.mocap_block.loc[step[0]: step[1],f"mask{side_string}"] = True
+                else:
+                    with self.output:
+                        logger.info(f"step {repr(step)} was marked as invalid")
+        with self.output:
+            print("generated sided mask")
 
     def create_controls(self):
 

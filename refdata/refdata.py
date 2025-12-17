@@ -1164,8 +1164,8 @@ def normalize_steps(steps_, PLOT_IT=False):
     #print("here")
     #logger.info(steps_)
     if len(steps_) == 0:
-        traceback.print_exc()
-        logger.error("you didnt give me any data to normalize!!!!!")
+        err = traceback.format_exc()
+        logger.error(f" you didnt give me any data to normalize!!!!!\n{err}")
     ## all steps will last 1.
     normalized_steps = []
     if steps_:

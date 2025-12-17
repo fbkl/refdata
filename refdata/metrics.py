@@ -214,12 +214,17 @@ class SyncedTrials:
         self.output = nullcontext()
         self.my_files = [imu_files, mocap_files]
 
+
+        self.is_ik = is_ik
         self.curve_suffix = ""
         self.master = False
+        self.valid_steps_created = False
         self.min_size_ext = None
 
         self.step_seg_l_list = []
         self.step_seg_r_list = []
+        self.valid_steps_l = []
+        self.valid_steps_r = []
 
 
         self.min_size_master = None
@@ -437,6 +442,19 @@ class SyncedTrials:
         self.mask_mocap = ik_strial.mask_mocap
         self.min_size_ext = ik_strial.min_size_master
 
+
+    def generate_sided_mask(self):
+        #
+        self.sided_mask = [[],[]]
+        for side, (valid_steps_lr, step_segs_lr) in enumerate(zip([self.valid_steps_l, self.valid_steps_r], [self.step_seg_l_list, self.step_seg_r_list] )):
+            if valid_steps_lr:
+                side_string = "_r" if side else "_l"
+                self.imu_block[f"mask{side_string}"] = False
+                self.mocap_block[f"mask{side_string}"] = False
+                for step in step_segs_lr:
+                    self.imu_block.loc[step[0]: step[1], f"mask{side_string}"] = True
+                    self.mocap_block.loc[step[0]: step[1],f"mask{side_string}"] = True
+
     def create_controls(self):
 
         sliced_once = False
@@ -543,6 +561,16 @@ class SyncedTrials:
                 valid_r.append(righties)
         valid_l.append(self.step_seg_l_list[-1])
         valid_r.append(self.step_seg_r_list[-1])
+        
+        if not self.valid_steps_created: ## then i can create, otherwise i would be overwriting changes!
+            for a_step_l in valid_l: 
+                self.valid_steps_l.append(True)
+            for a_step_r in valid_r: 
+                self.valid_steps_r.append(True)
+            self.valid_steps_l[-1] = False ## last step is not used and now i dont remember why, monkeys banana stepladder
+            self.valid_steps_r[-1] = False
+            self.valid_steps_created = True
+
         if True:
             self.step_seg_l_list = valid_l
             self.step_seg_r_list = valid_r
@@ -573,24 +601,70 @@ class SyncedTrials:
             min_size = min(len(imu_synced),len(mocap_synced))
             self.min_size_master = min_size
         else:
-            min_size = self.min_size_ext
+            min_size = min(len(imu_synced),len(mocap_synced), self.min_size_ext)
 
         imu_synced = imu_synced.iloc[:min_size]
+        
+        self.imu_block = imu_synced
         if valid(mocap_synced):
             mocap_synced = mocap_synced.iloc[:min_size]
+            self.mocap_block = mocap_synced
             # Sanity check
             with self.output:
+                
+
+
                 print(f"Synced length: {len(imu_synced)} == {len(mocap_synced)}")
                 assert(len(imu_synced) == len(mocap_synced))
                 print(f"Time range: {imu_synced.index[0]:.3f} to {imu_synced.index[-1]:.3f}")
-            self.mocap_block = mocap_synced.reset_index(drop=True)
         else:
             self.mocap_block = None
     
         with self.output:
             print(f"offset: {self.time_offset}")
 
-        self.imu_block  = imu_synced.reset_index(drop=True)
+        self.generate_sided_mask()
+
+    def complicated_get_mask_side(self, joint, imu_or_mocap_as_string):
+        imu_mask = None
+        mocap_mask = None
+
+        imu_mask_l = self.imu_block["mask_l"]    
+        imu_mask_r = self.imu_block["mask_r"]    
+        mocap_mask_l = self.mocap_block["mask_l"]    
+        mocap_mask_r = self.mocap_block["mask_r"]    
+        if   joint[-2:] == "_l":
+            imu_mask = imu_mask_l
+            mocap_mask = mocap_mask_l
+        elif joint[-2:] == "_r":
+            imu_mask = imu_mask_r
+            mocap_mask = mocap_mask_r
+        else:
+            imu_mask = imu_mask_l & imu_mask_r ## this should be a logic and, as it will only be valid when both are valid at the same time
+            mocap_mask = mocap_mask_l & mocap_mask_r ## this should be a logic and, as it will only be valid when both are valid at the same time
+        
+        if imu_or_mocap_as_string == "imu":
+            return imu_mask
+        elif imu_or_mocap_as_string == "mocap":
+            return mocap_mask
+
+        #this_imu_block  = self.imu_block.reset_index(drop=True)
+    def get_imu_block(self,joint):
+        imu_mask = self. complicated_get_mask_side(joint, "imu")
+
+        if self.is_ik:
+            return self.imu_block[joint]
+        else:
+            return self.imu_block.loc[imu_mask, joint]
+    
+    def get_mocap_block(self,joint):
+        mocap_mask = self. complicated_get_mask_side(joint, "mocap")
+
+        if self.is_ik:
+            return self.mocap_block[joint]
+        else:
+            return self.mocap_block.loc[mocap_mask, joint]
+
     def __del__(self):
         print("why are you deleting me?")
         print(self.my_files)
@@ -729,17 +803,26 @@ class Dismissed():
             ax = ax.flatten()
             display(fig)
         def compute_metrics(*args):
-            imu_all = pd.DataFrame()
-            mocap_all = pd.DataFrame()
+            #imu_all = pd.DataFrame()
+            imu_all = {}
+            #mocap_all = pd.DataFrame()
+            mocap_all = {}
             scale_imu=1
             scale_mocap=1
             for sTiii in sTrials:
-
                 ##this is bad, but if i am mixing scales it is also bad
                 scale_imu = sTiii.scale_imu
                 scale_mocap = sTiii.scale_mocap
-                imu_all = pd.concat([imu_all, sTiii.imu_block], ignore_index=True)
-                mocap_all = pd.concat([mocap_all, sTiii.mocap_block], ignore_index=True)
+                for joint in included_joints:
+                    if not joint in imu_all:
+                        imu_all[joint] = []
+                    if not joint in mocap_all:
+                        mocap_all[joint] = []
+
+                    imu_all[joint].extend(sTiii.get_imu_block(joint)) 
+                    mocap_all[joint].extend(sTiii.get_mocap_block(joint)) 
+                #imu_all = pd.concat([imu_all, sTiii.imu_block()], ignore_index=True)
+                #mocap_all = pd.concat([mocap_all, sTiii.mocap_block()], ignore_index=True)
 
 
             # we plot the synced values (sanity check)
@@ -843,7 +926,7 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
             sti.step_seg_r_list = self.step_seg_r_list
 
         self.ik.create_controls() # the plot is inside a control now, so we need this.
-        self.ik.create_plot()
+        #self.ik.create_plot()
         self.ik.rebork()
         for sti  in [self.grfl, self.grfr, self.id, self.so]:
             sti.mask_from(self.ik)
@@ -855,7 +938,7 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
     def rebork_all(self):
         for sti  in [self.grfl, self.grfr, self.id, self.so]:
             sti.create_controls() # the plot is inside a control now, so we need this.
-            sti.create_plot()
+            #sti.create_plot()
             sti.rebork()
 
 

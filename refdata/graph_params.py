@@ -69,14 +69,14 @@ def get_ik_graph_params():
                 'position':[2,1], #'position':[3,0],
                 'offset':0,
                 'scale':(1,180/3.1415921)}, 
-            'ankle_rotation':{'name':r'Foot_Int_Ext',
-                'plot_it':True,
+            'subtalar_angle':{'name':r'Foot_Int_Ext',
+                'plot_it':False,
                 'axes_limits':[-50,50],
                 'title':"Foot Progression",
                 'yaxis_name':r"%s$\leftarrow$ Ext Int $\rightarrow$"%variable_unit,
                 'position':[2,2],
                 'offset':0,
-                'scale':(1,1)}
+                'scale':(1,180/3.1415921)}
         }
 
 def get_ik_graph_params13():

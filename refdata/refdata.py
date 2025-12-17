@@ -526,7 +526,7 @@ def generate_action_plots(action_trials, xy_clippings_both, skip_trials,include_
             logger.debug(skip_trials)
             matching_actions = [action_name for action_name in include_actions if action_name in file]
             if not matching_actions or i_file in skip_trials :
-                logger.warning("skipping file: %s"%file)
+                logger.debug("skipping file: %s"%file) ## this should be fine, i guess
                 continue
             elif len(matching_actions) >1:
                 raise ValueError("More than one action in the specified file name!")
@@ -560,7 +560,7 @@ def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, al
             if ref_name["plot_it"]:
                 logger.debug(joint_or_muscle_name_suffix)
                 joint_or_muscle_complete_name = joint_or_muscle_name+joint_or_muscle_name_suffix[l_r]+curve_suffix
-                if ("pelvis"  in joint_or_muscle_complete_name or "lumbar" in joint_or_muscle_complete_name) and not l_r:
+                if ("pelvis"  in joint_or_muscle_complete_name or "lumbar" in joint_or_muscle_complete_name) and not l_r: ### TODO: pelvis_plot_only_right_side should be a list of things you want to plot only the right side of. and here we should do like a for loop. also just a couple of lines down there is the same logic again for the combine sides thing which is probably broken RN. This needs fixing, specially if you want to run another model.  
                     logger.info(f"skipping {joint_or_muscle_complete_name} {l_r}")
                     continue
                 if not joint_or_muscle_complete_name in all_curves_for_this_person.keys():

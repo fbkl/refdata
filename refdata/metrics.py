@@ -612,13 +612,22 @@ class Dismissed():
         
         stll = None
         stlr = None
+        curve_suffix = ""
         if gtype == "grf":
             stll = self.get_strials("grfl")
             stlr = self.get_strials("grfr")
+            if not type(conv_names) == type([]) or not len(conv_names) == 2:
+                logger.error("grf plotting requires different convnames for each side and you make them into a list [left, right]. that is because grf is based on the file definitions and the file definitions are weird and inconsistent, so doing this requires some flexibility here. ")
         else:
             stll = self.get_strials(gtype)
             stlr = stll
+            if not type(conv_names) == type([]) or not len(conv_names) == 2:
+                conv_names = [conv_names, conv_names]
 
+
+        if gtype == "id":
+            curve_suffix = "_moment"
+       
         all_curves_for_this_person = {}
 
 
@@ -637,7 +646,7 @@ class Dismissed():
                 this_file_name = [stli.my_files[1],stri.my_files[1]]
 
             for l_r, (data_i, which_clippings) in enumerate(zip([stlis, stris],(stli.step_seg_l_list, stri.step_seg_r_list))):
-                all_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, all_curves_for_this_person, ref=ref, conv_names=conv_names, pelvis_plot_only_right_side=True, combine_sides=False))
+                all_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, all_curves_for_this_person, ref=ref, conv_names=conv_names[l_r], curve_suffix=curve_suffix, pelvis_plot_only_right_side=True, combine_sides=False))
         return all_curves_for_this_person
 
     def get_strials(self, gtype):
@@ -704,12 +713,11 @@ class Dismissed():
         cols = 2
         rows = int(np.ceil(len(included_joints)/cols)) 
         with metrics_output:
+            metrics_output.clear_output()
             fig, ax = plt.subplots(rows,cols, figsize= (10,2.5*rows), constrained_layout= True)
             ax = ax.flatten()
             display(fig)
         def compute_metrics(*args):
-            with metrics_output:
-                metrics_output.clear_output()
             imu_all = pd.DataFrame()
             mocap_all = pd.DataFrame()
             scale_imu=1
@@ -725,6 +733,11 @@ class Dismissed():
 
             # we plot the synced values (sanity check)
             # and compute the metrics
+            with metrics_output:
+                metrics_output.clear_output()
+                fig, ax = plt.subplots(rows,cols, figsize= (10,2.5*rows), constrained_layout= True)
+                ax = ax.flatten()
+                display(fig)
             results = {}
             for jjjjj, joint in enumerate(included_joints):
                 is_skip = False
@@ -736,20 +749,22 @@ class Dismissed():
                     continue
                 imu_signal = imu_all[joint].values * scale_imu  # to degrees if needed
                 mocap_signal = mocap_all[joint].values * scale_mocap  # to degrees if needed
-                ax[jjjjj].clear()
-                ax[jjjjj].plot(imu_signal,label="imu"+joint)
-                ax[jjjjj].plot(mocap_signal,label="mocap"+joint)
-                #plt.legend()
-                #plt.title(joint)
-                ax[jjjjj].set_title(joint)
-                #plt.show()
+                with metrics_output:
+                    ax[jjjjj].clear()
+                    ax[jjjjj].plot(imu_signal,label="imu"+joint)
+                    ax[jjjjj].plot(mocap_signal,label="mocap"+joint)
+                    #plt.legend()
+                    #plt.title(joint)
+                    ax[jjjjj].set_title(joint)
+                    #plt.show()
                 rmse = np.sqrt(np.mean((imu_signal - mocap_signal)**2))
                 pearson_r, p_value = stats.pearsonr(imu_signal, mocap_signal)
 
                 results[joint] = {'RMSE': rmse, 'Pearson_r': pearson_r}
             # Make it a nice dataframe
             results_df = pd.DataFrame(results).T
-            print(results_df)
+            with metrics_output:
+                print(results_df)
 
         comp_button = Button(description="Compute Metrics")
         comp_button.on_click(compute_metrics)

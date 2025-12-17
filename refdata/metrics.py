@@ -17,6 +17,7 @@ PB = "pelvis_list"
 #PB = "pelvis_obliquity"
 
 from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output, Layout
+import ipywidgets as widgets
 
 def get_roted(this_df, in_degrees=False):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]
@@ -205,9 +206,12 @@ def valid(maybe_df):
     else:
         return False
 
+from contextlib import nullcontext
+
 
 class SyncedTrials:
     def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False):
+        self.output = nullcontext()
         self.my_files = [imu_files, mocap_files]
 
         self.curve_suffix = ""
@@ -473,15 +477,19 @@ class SyncedTrials:
         self.replot_button = Button(description="Reploterino")
         self.replot_button.on_click(self.rebork)
 
-        
+        self.output = Output()
+
         self.create_plot()
 
-        self.ui = VBox([
+        self.ui = widgets.Accordion(children=[
+        VBox([
             HBox([self.s1, self.t1]),
             HBox([self.s2, self.t2]),
             self.replot_button,
-        ])
+            self.output
+        ])])
 
+        self.ui.set_title(0,f"imu:{repr(self.my_files[0])} mocap:{repr(self.my_files[1])}")
 
     def create_plot(self):
     
@@ -495,8 +503,8 @@ class SyncedTrials:
     def rebork(self,*args):
         #plt.plot(total_xcorr) ## not sure how to interpret this anyways,,, it start with one trial with just one sample in common i think, like full whole length of time of one trial offset
         #plt.show()
-        #with self.out:
-        #    self.out.clear_output()
+        with self.output:
+            self.output.clear_output()
         ## this shows the time correction, should be good.
         for joint, ax in zip( self.common_joints, self.axs):
             ax.clear()
@@ -535,13 +543,14 @@ class SyncedTrials:
                 valid_r.append(righties)
         valid_l.append(self.step_seg_l_list[-1])
         valid_r.append(self.step_seg_r_list[-1])
-        print(valid_l)
-        print(valid_r)
         if True:
             self.step_seg_l_list = valid_l
             self.step_seg_r_list = valid_r
 
-        plt.show()
+        with self.output:
+            print(valid_l)
+            print(valid_r)
+            display(self.fig)
 
 
         # NOW trim to overlapping region
@@ -570,14 +579,16 @@ class SyncedTrials:
         if valid(mocap_synced):
             mocap_synced = mocap_synced.iloc[:min_size]
             # Sanity check
-            print(f"Synced length: {len(imu_synced)} == {len(mocap_synced)}")
-            assert(len(imu_synced) == len(mocap_synced))
-            print(f"Time range: {imu_synced.index[0]:.3f} to {imu_synced.index[-1]:.3f}")
+            with self.output:
+                print(f"Synced length: {len(imu_synced)} == {len(mocap_synced)}")
+                assert(len(imu_synced) == len(mocap_synced))
+                print(f"Time range: {imu_synced.index[0]:.3f} to {imu_synced.index[-1]:.3f}")
             self.mocap_block = mocap_synced.reset_index(drop=True)
         else:
             self.mocap_block = None
     
-        print(f"offset: {self.time_offset}")
+        with self.output:
+            print(f"offset: {self.time_offset}")
 
         self.imu_block  = imu_synced.reset_index(drop=True)
     def __del__(self):
@@ -737,7 +748,6 @@ class Dismissed():
                 metrics_output.clear_output()
                 fig, ax = plt.subplots(rows,cols, figsize= (10,2.5*rows), constrained_layout= True)
                 ax = ax.flatten()
-                display(fig)
             results = {}
             for jjjjj, joint in enumerate(included_joints):
                 is_skip = False
@@ -755,6 +765,7 @@ class Dismissed():
                     ax[jjjjj].plot(mocap_signal,label="mocap"+joint)
                     #plt.legend()
                     #plt.title(joint)
+
                     ax[jjjjj].set_title(joint)
                     #plt.show()
                 rmse = np.sqrt(np.mean((imu_signal - mocap_signal)**2))
@@ -764,6 +775,7 @@ class Dismissed():
             # Make it a nice dataframe
             results_df = pd.DataFrame(results).T
             with metrics_output:
+                display(fig)
                 print(results_df)
 
         comp_button = Button(description="Compute Metrics")
@@ -830,6 +842,7 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
             sti.step_seg_l_list = self.step_seg_l_list
             sti.step_seg_r_list = self.step_seg_r_list
 
+        self.ik.create_controls() # the plot is inside a control now, so we need this.
         self.ik.create_plot()
         self.ik.rebork()
         for sti  in [self.grfl, self.grfr, self.id, self.so]:
@@ -841,6 +854,7 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
 
     def rebork_all(self):
         for sti  in [self.grfl, self.grfr, self.id, self.so]:
+            sti.create_controls() # the plot is inside a control now, so we need this.
             sti.create_plot()
             sti.rebork()
 

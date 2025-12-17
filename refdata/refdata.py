@@ -1364,7 +1364,7 @@ def each_side_plot(grf_,zero_time, **kwargs):
 
 
 
-def each_side_plot_meat(grfdata, grfdata_time, zero_time, grf_name_prefix = "1_ground_", side="Left", weight=None, plot_all=False, time_offset=0, plot_no_offset=True, nicer_plot=False, figax = None, figsize=(18,4)):
+def each_side_plot_meat(grfdata, grfdata_time, zero_time, grf_name_prefix = "1_ground_", side="Left", weight=None, plot_all=False, time_offset=0, plot_no_offset=True, nicer_plot=False, figax = None, figsize=(18,4),do_plot=True):
     
 
     x_grf = np.array(list(grfdata_time-zero_time))
@@ -1378,54 +1378,55 @@ def each_side_plot_meat(grfdata, grfdata_time, zero_time, grf_name_prefix = "1_g
     logger.debug(st_seg)
     all_handles = []
     all_labels = []
-    
-    if nicer_plot:
-        fig = figax[0]
-        ax1 = figax[1]
-    else:
-        fig, ax1 = plt.subplots(figsize=figsize)
-    ax1.xaxis.set_major_locator(MultipleLocator(1))    
-    ax1.xaxis.set_minor_locator(MultipleLocator(.1))    
-    #plt.plot(x_ik,ik_2.data.ankle_angle_l/3.141592*180,"--", label="ankle l")
-    #plt.plot(x_ik,ik_2.data.hip_flexion_l/3.141592*180,"--", label="hip x l")
-    
-    xsl, ysl, textstrl = gen_step_ticks(steps_vec, weight)
-    
-    ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_py"],'r', label="py")
-    if plot_all:
-        ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_px"],'g', label="px")
-        ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_pz"],'b', label="pz") 
-    
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    handles, labels = ax1.get_legend_handles_labels()
-    all_handles.extend(handles)
-    all_labels.extend(labels)
-    ax1.set_ylim((-0.05,1))
+   
+    if do_plot:
+        if nicer_plot:
+            fig = figax[0]
+            ax1 = figax[1]
+        else:
+            fig, ax1 = plt.subplots(figsize=figsize)
+        ax1.xaxis.set_major_locator(MultipleLocator(1))    
+        ax1.xaxis.set_minor_locator(MultipleLocator(.1))    
+        #plt.plot(x_ik,ik_2.data.ankle_angle_l/3.141592*180,"--", label="ankle l")
+        #plt.plot(x_ik,ik_2.data.hip_flexion_l/3.141592*180,"--", label="hip x l")
+        
+        xsl, ysl, textstrl = gen_step_ticks(steps_vec, weight)
+        
+        ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_py"],'r', label="py")
+        if plot_all:
+            ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_px"],'g', label="px")
+            ax1.plot(x_grf,grfdata[f"{grf_name_prefix}force_pz"],'b', label="pz") 
+        
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        handles, labels = ax1.get_legend_handles_labels()
+        all_handles.extend(handles)
+        all_labels.extend(labels)
+        ax1.set_ylim((-0.05,1))
 
-    
-    # plotting step ticks
-    ax2.plot(xsl,ysl,'g')
-    for a_text in textstrl:
-        ax2.annotate(a_text[2],(a_text[0],a_text[1]))
-    
-    if plot_no_offset:
-        ax2.plot(x_grf,grfdata[f"{grf_name_prefix}force_vy"],'darkred', label="y")
-    ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vy"],'coral', label="y t_off=%f"%time_offset)
-    if plot_all:
-        ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vx"],'lime', label="x")
-        ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vz"],'navy', label="z")
-    
-    handles, labels = ax2.get_legend_handles_labels()
-    all_handles.extend(handles)
-    all_labels.extend(labels)
+        
+        # plotting step ticks
+        ax2.plot(xsl,ysl,'g')
+        for a_text in textstrl:
+            ax2.annotate(a_text[2],(a_text[0],a_text[1]))
+        
+        if plot_no_offset:
+            ax2.plot(x_grf,grfdata[f"{grf_name_prefix}force_vy"],'darkred', label="y")
+        ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vy"],'coral', label="y t_off=%f"%time_offset)
+        if plot_all:
+            ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vx"],'lime', label="x")
+            ax2.plot(x_grf_offset,grfdata[f"{grf_name_prefix}force_vz"],'navy', label="z")
+        
+        handles, labels = ax2.get_legend_handles_labels()
+        all_handles.extend(handles)
+        all_labels.extend(labels)
 
 
-    plt.title(f"grf {side}: ")
-    fig.legend(all_handles, all_labels)
-    if nicer_plot:
-        pass
-    else:
-        plt.show()
+        plt.title(f"grf {side}: ")
+        fig.legend(all_handles, all_labels)
+        if nicer_plot:
+            pass
+        else:
+            plt.show()
 
     try:
         round_output = np.vectorize(lambda n: (np.round(n,2) if n else 1000))

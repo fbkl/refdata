@@ -447,10 +447,11 @@ class SyncedTrials:
         #
         self.sided_mask = [[],[]]
         for side, (valid_steps_lr, step_segs_lr) in enumerate(zip([self.valid_steps_l, self.valid_steps_r], [self.step_seg_l_list, self.step_seg_r_list] )):
+            ## we may not have a single valid step, in this case we want to set the whole mask to false, but we want the mask to exist, i guess
+            side_string = "_r" if side else "_l"
+            self.imu_block[f"mask{side_string}"] = False
+            self.mocap_block[f"mask{side_string}"] = False
             if valid_steps_lr:
-                side_string = "_r" if side else "_l"
-                self.imu_block[f"mask{side_string}"] = False
-                self.mocap_block[f"mask{side_string}"] = False
                 for step in step_segs_lr:
                     self.imu_block.loc[step[0]: step[1], f"mask{side_string}"] = True
                     self.mocap_block.loc[step[0]: step[1],f"mask{side_string}"] = True
@@ -499,10 +500,26 @@ class SyncedTrials:
 
         self.create_plot()
 
+        self.left_checkbox_container = widgets.HBox([])
+        self.right_checkbox_container = widgets.HBox([])
+
+        left_panel = widgets.VBox([
+            widgets.Label("Left Steps:"),
+            self.left_checkbox_container
+        ])
+        
+        right_panel = widgets.VBox([
+            widgets.Label("Right Steps:"),
+            self.right_checkbox_container
+        ])
+        
+        panels = widgets.HBox([left_panel, right_panel])
+
         self.ui = widgets.Accordion(children=[
         VBox([
             HBox([self.s1, self.t1]),
             HBox([self.s2, self.t2]),
+            panels,
             self.replot_button,
             self.output
         ])])
@@ -515,8 +532,44 @@ class SyncedTrials:
         #self.fig.tight_layout()
         self.axs.flatten()
 
+    def update_checkboxes(self, side):
+        """Rebuild the checkbox list when steps change"""
+        if side == 'left':
+            steps = self.valid_steps_l
+            container = self.left_checkbox_container
+        else:
+            steps = self.valid_steps_r
+            container = self.right_checkbox_container
+        
+        # Clear existing checkboxes
+        container.children = []
+        
+        # Create new checkboxes
+        checkboxes = []
+        for i, enabled in enumerate(steps):
+            cb = widgets.Checkbox(
+                value=enabled,
+                description=f"{i+1}",
+                indent=False
+            )
+            # Connect to update function
+            cb.observe(lambda change, idx=i, s=side: 
+                      self.on_checkbox_change(change, idx, s), 
+                      names='value')
+            checkboxes.append(cb)
+        
+        # Update container
+        container.children = checkboxes
+    
+    def on_checkbox_change(self, change, idx, side):
+        """Update the step list when checkbox changes"""
+        if side == 'left':
+            self.valid_steps_l[idx] = change['new']
+        else:
+            self.valid_steps_r[idx] = change['new']
 
-
+        ##gotta update the mask after disabling the dude.
+        self.generate_sided_mask()
 
     def rebork(self,*args):
         #plt.plot(total_xcorr) ## not sure how to interpret this anyways,,, it start with one trial with just one sample in common i think, like full whole length of time of one trial offset
@@ -570,6 +623,9 @@ class SyncedTrials:
             self.valid_steps_l[-1] = False ## last step is not used and now i dont remember why, monkeys banana stepladder
             self.valid_steps_r[-1] = False
             self.valid_steps_created = True
+            ## when and if you want to add more adls to each side then this will get tricky, but now it is easy
+            self.update_checkboxes("left")
+            self.update_checkboxes("right")
 
         if True:
             self.step_seg_l_list = valid_l
@@ -626,6 +682,9 @@ class SyncedTrials:
         self.generate_sided_mask()
 
     def complicated_get_mask_side(self, joint, imu_or_mocap_as_string):
+        joint = joint[:-len(self.curve_suffix)]
+
+
         imu_mask = None
         mocap_mask = None
 
@@ -819,11 +878,19 @@ class Dismissed():
                     if not joint in mocap_all:
                         mocap_all[joint] = []
 
-                    imu_all[joint].extend(sTiii.get_imu_block(joint)) 
-                    mocap_all[joint].extend(sTiii.get_mocap_block(joint)) 
+                    bi = list(sTiii.get_imu_block(joint))
+                    bm = list(sTiii.get_mocap_block(joint))
+                    min_of_them = min([len(bi),len(bm)])
+                    print([len(bi),len(bm)])
+                    bi = bi[:min_of_them]
+                    bm = bm[:min_of_them]
+                    imu_all[joint].extend(bi) 
+                    mocap_all[joint].extend(bm) 
                 #imu_all = pd.concat([imu_all, sTiii.imu_block()], ignore_index=True)
                 #mocap_all = pd.concat([mocap_all, sTiii.mocap_block()], ignore_index=True)
-
+            ##sanity check
+            for joint in included_joints:
+                assert(len(imu_all[joint])==len(mocap_all[joint]))
 
             # we plot the synced values (sanity check)
             # and compute the metrics
@@ -840,8 +907,8 @@ class Dismissed():
                         break
                 if is_skip:
                     continue
-                imu_signal = imu_all[joint].values * scale_imu  # to degrees if needed
-                mocap_signal = mocap_all[joint].values * scale_mocap  # to degrees if needed
+                imu_signal = np.array(imu_all[joint]) * scale_imu  # to degrees if needed
+                mocap_signal = np.array(mocap_all[joint]) * scale_mocap  # to degrees if needed
                 with metrics_output:
                     ax[jjjjj].clear()
                     ax[jjjjj].plot(imu_signal,label="imu"+joint)
@@ -932,8 +999,8 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
             sti.mask_from(self.ik)
     def grf_split_me(self):
         zero_time = 0
-        self.step_seg_l_list = each_side_plot_meat(self.grfl.imu_resampled, self.grfl.imu_resampled.index,zero_time,grf_name_prefix = "1_ground_", side="Left", weight=self.weight)
-        self.step_seg_r_list = each_side_plot_meat(self.grfr.imu_resampled, self.grfr.imu_resampled.index,zero_time,grf_name_prefix = "ground_", side="Right", weight=self.weight)
+        self.step_seg_l_list = each_side_plot_meat(self.grfl.imu_resampled, self.grfl.imu_resampled.index,zero_time,grf_name_prefix = "1_ground_", side="Left", weight=self.weight, do_plot=False)
+        self.step_seg_r_list = each_side_plot_meat(self.grfr.imu_resampled, self.grfr.imu_resampled.index,zero_time,grf_name_prefix = "ground_", side="Right", weight=self.weight, do_plot=False)
 
     def rebork_all(self):
         for sti  in [self.grfl, self.grfr, self.id, self.so]:

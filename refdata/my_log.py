@@ -4,6 +4,8 @@
 
 import logging
 
+CONTEXT = "NOT SET"
+
 class CustomFormatter(logging.Formatter):
     """Logging Formatter to add colors and count warning / errors"""
 
@@ -26,7 +28,10 @@ class CustomFormatter(logging.Formatter):
     def format(self, record):
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+        global CONTEXT  # not even needed for reading, but makes it clear
+        prefix = f"[{CONTEXT}] " if CONTEXT else ""
+
+        return prefix + super().format(record)
 
 
 import pprint

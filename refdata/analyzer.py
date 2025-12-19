@@ -25,25 +25,27 @@ import pickle
 refdata.plt.rcParams['figure.figsize'] = [12, 5]
 refdata.ROW_OF_FLOTS = 1
 
-######################### TRIAL INFO ##########################################
-
-this_action_name = "walking"
-
-subject_num="EX01RE"
-subject_vicon_num = "EXS1"
-weight= 53
 
 
-###############################################################################
+def make_dir(base):
+    path, n = base, 1
+    while os.path.exists(path):
+        path = f"{base}_{n}"
+        n+=1
+    os.makedirs(path)
+    return path
 
+def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None):
+    
+    plt.close('all')
+    
+    if not results_dir:
+        results_dir = make_dir("results")
+    
+    my_dir = os.path.join(results_dir,subject_num, this_action_name) + "/"
+    os.makedirs(my_dir)
 
-print(myMocapLumpList[0])
-print(myImuLumpList[0])
-
-
-def graphs_and_metrics(mySL, subject_num, weight, this_action_name, ):
-
-    mySL = metrics.Dismissed(weight=weight)
+    mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir)
 
     mySL.set_by_two_lists_of_lumps(myImuLumpList, myMocapLumpList    )
 
@@ -84,10 +86,8 @@ def graphs_and_metrics(mySL, subject_num, weight, this_action_name, ):
             RR = [None, None]
             for j, stream in enumerate(["imu", "mocap"]):
                 print("¤"*80)
-                if (mode== "grf" or mode == "so" ) and stream == "mocap":
+                if mode== "grf"  and stream == "mocap":
                     ## i can load the emg here for so and maybe do something for force plate idk
-                    if mode == "so":
-                        asRefData[1] = asSORefData1
                     continue
                 all_XXX_curves_for_this_person[j] = mySL.gen_action_plots(mode,stream, conv_names = conv_name_i)
 
@@ -96,13 +96,13 @@ def graphs_and_metrics(mySL, subject_num, weight, this_action_name, ):
                     print("<>"*80)
                     RR[j] = refdata.plot_std_plots(all_XXX_curves_for_this_person[j], plot_std=std_or_not, ref=None,
                                subplot_grid = fig_size,)
-                    plt.savefig(f'sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
+                    plt.savefig(my_dir+f'sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
 
                 ## i dont think it makes a difference if it is std or all for the gencurves thing
                 asRefData[j] = refdata.RefData(this_action_name)
                 asRefData[j].reference_curve_dict = RR[j][4]
 
-                pickle.dump(all_XXX_curves_for_this_person[j],open(f"{mode}{this_action_name}{subject_num}_{stream}{i}.p","wb"))
+                pickle.dump(all_XXX_curves_for_this_person[j],open(my_dir+f"{mode}{this_action_name}{subject_num}_{stream}{i}.p","wb"))
 
             print("A"*80)
 
@@ -111,7 +111,7 @@ def graphs_and_metrics(mySL, subject_num, weight, this_action_name, ):
                                subplot_grid = fig_size,)
 
             print("B"*80)
-            plt.savefig(f'sub{subject_num}_{mode}_{this_action_name}_imu_mocap_ref_{ptupl(fig_size)}_all{i}.pdf', bbox_inches = 'tight')
+            plt.savefig(my_dir+f'sub{subject_num}_{mode}_{this_action_name}_imu_mocap_ref_{ptupl(fig_size)}_all{i}.pdf', bbox_inches = 'tight')
 
         
 
@@ -149,7 +149,7 @@ def graphs_and_metrics(mySL, subject_num, weight, this_action_name, ):
     fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list_so2, axs, fig)
 
 
-    plt.savefig(f'sub{subject_num}_ik_id_so_{this_action_name}8x3_tighter_stds.pdf', bbox_inches = 'tight')
+    plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}8x3_tighter_stds.pdf', bbox_inches = 'tight')
     # In[ ]:
 
 
@@ -178,7 +178,7 @@ def graphs_and_metrics(mySL, subject_num, weight, this_action_name, ):
     l = fig.legend([(nh[1],nh[2],nh[3]),(nh[4],nh[5],nh[6]),(nh[0], )], [r"Left $\pm$ 1 sd",r"Right $\pm$ 1 sd",r"Ref. mean $\pm$ 1 sd"], numpoints=1,
                   handler_map={tuple: HandlerTuple(ndivide=None)},loc='lower right', bbox_to_anchor=(0.9, 0.2))
 
-    plt.savefig(f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_stds.pdf', bbox_inches = 'tight')
+    plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_stds.pdf', bbox_inches = 'tight')
 
 
     # ## This is the sagital plane with calf muscles with all. maybe goes in appendix paper
@@ -197,6 +197,7 @@ def graphs_and_metrics(mySL, subject_num, weight, this_action_name, ):
     #l = fig.legend([(nh[1],nh[2],nh[3]),(nh[4],nh[5],nh[6]),(nh[0], )], ["Left $\pm$ 1 sd","Right $\pm$ 1 sd","Ref. mean $\pm$ 1 sd"], numpoints=1,
     #              handler_map={tuple: HandlerTuple(ndivide=None)},loc='lower right', bbox_to_anchor=(0.9, 0.2))
 
-    plt.savefig(f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_all.pdf', bbox_inches = 'tight')
+    plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_all.pdf', bbox_inches = 'tight')
 
-
+    plt.close('all')
+    return results_dir

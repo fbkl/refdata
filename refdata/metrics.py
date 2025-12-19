@@ -217,7 +217,10 @@ from contextlib import nullcontext
 
 
 class SyncedTrials:
-    def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False):
+    def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False, save_fig_dir="./", mode="unknown_mode", index=-1 ):
+        self.mode = mode
+        self.index = index
+        self.save_fig_dir=save_fig_dir
         self.output = nullcontext()
         self.my_files = [imu_files, mocap_files]
 
@@ -646,6 +649,7 @@ class SyncedTrials:
             print(valid_l)
             print(valid_r)
             interactive_display(self.fig)
+            self.fig.savefig(f"{self.save_fig_dir}/sync{self.mode}{self.index}.png")
 
 
         # NOW trim to overlapping region
@@ -754,13 +758,14 @@ class Dismissed():
 
     """
 
-    def __init__(self, slumpList=[], weight=None):
+    def __init__(self, slumpList=[], weight=None, save_fig_dir="./"):
         self.slumpList = slumpList
         self.weight = weight
+        self.save_fig_dir = save_fig_dir
 
     def set_by_two_lists_of_lumps(self, imuLs, mocapLs):
-        for a, b in zip(imuLs, mocapLs):
-            self.slumpList.append(SyncedLump(a,b,self.weight))
+        for i, (a, b) in enumerate(zip(imuLs, mocapLs)):
+            self.slumpList.append(SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i))
 
     
     def gen_action_plots(self, gtype, iomtype, conv_names= None, ref=None):
@@ -938,6 +943,7 @@ class Dismissed():
             with metrics_output:
                 interactive_display(fig)
                 print(results_df)
+                fig.savefig(f"{self.save_fig_dir}/allsync{self.mode}{self.index}.png")
 
         comp_button = Button(description="Compute Metrics")
         comp_button.on_click(compute_metrics)
@@ -987,16 +993,18 @@ from .refdata import each_side_plot_meat
 
 class SyncedLump(): ## dont get distracted. a lump is a trial 
     #with all the data from all the sources okay
-    def __init__(self, imuLump, mocapLump, weight):
+    def __init__(self, imuLump, mocapLump, weight, save_fig_dir="./", index=-1):
         self.weight = weight
-        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True) ## this will be automatically synced
+        self.index = index
+        self.save_fig_dir=save_fig_dir
+        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True, mode="ik", index=index) ## this will be automatically synced
         self.ik.master = True
         self.lag = self.ik.time_offset
-        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag)
-        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag)
-        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag)
-        self.so = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag)
-        
+        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag, mode="grfl", index=index)
+        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, mode="grfr", index=index)
+        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, mode="id", index=index)
+        self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, mode="so", index=index)
+       
         self.grf_split_me()
         self.update_from_grf()
 

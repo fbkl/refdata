@@ -35,7 +35,7 @@ def make_dir(base):
     os.makedirs(path)
     return path
 
-def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None):
+def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None, ext_sync = [None,None]):
     
     plt.close('all')
     
@@ -45,7 +45,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     my_dir = os.path.join(results_dir,subject_num, this_action_name) + "/"
     os.makedirs(my_dir)
 
-    mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir)
+    mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir, ext_sync = [None,None], action=this_action_name)
 
     mySL.set_by_two_lists_of_lumps(myImuLumpList, myMocapLumpList    )
 
@@ -98,6 +98,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                                subplot_grid = fig_size,)
                     plt.savefig(my_dir+f'sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
 
+                    
                 ## i dont think it makes a difference if it is std or all for the gencurves thing
                 asRefData[j] = refdata.RefData(this_action_name)
                 asRefData[j].reference_curve_dict = RR[j][4]

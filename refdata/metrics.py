@@ -650,6 +650,8 @@ class SyncedTrials:
             print(valid_r)
             interactive_display(self.fig)
             self.fig.savefig(f"{self.save_fig_dir}/sync{self.mode}{self.index}.png")
+            if not interactive:
+                plt.close(self.fig)
 
 
         # NOW trim to overlapping region
@@ -758,15 +760,27 @@ class Dismissed():
 
     """
 
-    def __init__(self, slumpList=[], weight=None, save_fig_dir="./"):
+    def __init__(self, slumpList=[], weight=None, save_fig_dir="./", action="unknown"):
         self.slumpList = slumpList
         self.weight = weight
         self.save_fig_dir = save_fig_dir
+        self.action = action
 
-    def set_by_two_lists_of_lumps(self, imuLs, mocapLs):
+    def set_by_two_lists_of_lumps(self, imuLs, mocapLs, ext_sync = [None,None]):
         for i, (a, b) in enumerate(zip(imuLs, mocapLs)):
-            self.slumpList.append(SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i))
+            this_SL = SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i, action= self.action)
+            if ext_sync[0] or ext_sync[1]:
+                logger.warning("Using external segmentation for actions!!!")
+                this_SL.manual_split(ext_sync[0], ext_sync[1])
+            self.slumpList.append(this_SL)
 
+    def manual_segmentation(self, list_of_things):
+        for iSL, (ls, rs) in zip(self.slumplist, list_of_things):
+            iSL.manual_split(ls, rs)
+    
+    def which_steps_do_i_plot(self, list_of_things):
+        for iSL, (ls, rs) in zip(self.slumplist, list_of_things):
+            iSL.manual_set_valid_id_so(ls, rs)
     
     def gen_action_plots(self, gtype, iomtype, conv_names= None, ref=None):
         
@@ -944,6 +958,8 @@ class Dismissed():
                 interactive_display(fig)
                 print(results_df)
                 fig.savefig(f"{self.save_fig_dir}/allsync{self.mode}{self.index}.png")
+                if not interactive:
+                    plt.close(fig)
 
         comp_button = Button(description="Compute Metrics")
         comp_button.on_click(compute_metrics)
@@ -993,22 +1009,40 @@ from .refdata import each_side_plot_meat
 
 class SyncedLump(): ## dont get distracted. a lump is a trial 
     #with all the data from all the sources okay
-    def __init__(self, imuLump, mocapLump, weight, save_fig_dir="./", index=-1):
+    def __init__(self, imuLump, mocapLump, weight, save_fig_dir="./", index=-1, action="unknown"):
         self.weight = weight
         self.index = index
         self.save_fig_dir=save_fig_dir
         self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True, mode="ik", index=index) ## this will be automatically synced
         self.ik.master = True
+        self.action = action
         self.lag = self.ik.time_offset
-        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag, mode="grfl", index=index)
-        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, mode="grfr", index=index)
-        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, mode="id", index=index)
-        self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, mode="so", index=index)
+        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfl", index=index)
+        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfr", index=index)
+        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="id", index=index)
+        self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="so", index=index)
        
-        self.grf_split_me()
-        self.update_from_grf()
+        if self.action in ["walking", "gait", "running"]:
+            
+            self.grf_split_me()
+            self.update_from_splits()
 
-    def update_from_grf(self):
+    def manual_split(self, l_segs, r_segs):
+
+        self.step_seg_l_list = l_segs
+        self.step_seg_r_list = r_segs
+        self.update_from_splits()
+        
+    def manual_set_valid_id_so(self, lvalid, rvalid):
+        self.id.valid_steps_l = lvalid
+        self.id.valid_steps_r = rvalid
+        self.id.generate_sided_mask()
+    
+        self.so.valid_steps_l = lvalid
+        self.so.valid_steps_r = rvalid
+        self.so.generate_sided_mask()
+    
+    def update_from_splits(self):
 
         for sti  in [self.ik, self.grfl, self.grfr, self.id, self.so]:
             sti.step_seg_l_list = self.step_seg_l_list

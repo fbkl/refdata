@@ -855,8 +855,14 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
             ref_name = curve_dict_curves[3]
             logger.debug(f"the ref_name for this set of curves is {ref_name}")
 
-            ax = axs[ ref_name["position"][0],ref_name["position"][1]]
-            ax.set_axis_on()
+            ax = axs[0,0]
+            try: 
+                ax = axs[ ref_name["position"][0],ref_name["position"][1]]
+                ax.set_axis_on()
+            except:
+                ax_x = ref_name["position"][0]
+                ax_y = ref_name["position"][1]
+                logger.error(f"you are trying to plot in subplot {ax_x,ax_y} that doesnt exist {axs.shape}")
             if plot_ref_curves:
                 if not ref:
                     logger.warning("I was asked to display references, but no reference defined!")

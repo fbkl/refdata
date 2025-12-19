@@ -19,6 +19,13 @@ PB = "pelvis_list"
 from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output, Layout
 import ipywidgets as widgets
 
+interactive = False
+
+def interactive_display(ui_control):
+    if interactive:
+        display(ui_control)
+
+
 def get_roted(this_df, in_degrees=False):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]
     
@@ -638,7 +645,7 @@ class SyncedTrials:
         with self.output:
             print(valid_l)
             print(valid_r)
-            display(self.fig)
+            interactive_display(self.fig)
 
 
         # NOW trim to overlapping region
@@ -819,7 +826,7 @@ class Dismissed():
 
         return sTrialsList
 
-    def run_analysis(self, gtype, lag=None):
+    def run_analysis(self, gtype, lag=None, auto_compute_metrics = False):
 
         time_offsets = []
         sTrials = self.get_strials(gtype)
@@ -842,7 +849,7 @@ class Dismissed():
             sTiii.create_controls()
             ui_list.append(sTiii.ui)
             sTiii.rebork()
-            display(sTiii.ui)
+            interactive_display(sTiii.ui)
 
         metrics_output = Output()
         skip_joints = ["lumbar", "subtalar", "mtp"]
@@ -864,7 +871,7 @@ class Dismissed():
             metrics_output.clear_output()
             fig, ax = plt.subplots(rows,cols, figsize= (10,2.5*rows), constrained_layout= True)
             ax = ax.flatten()
-            display(fig)
+            interactive_display(fig)
         def compute_metrics(*args):
             #imu_all = pd.DataFrame()
             imu_all = {}
@@ -929,13 +936,16 @@ class Dismissed():
             # Make it a nice dataframe
             results_df = pd.DataFrame(results).T
             with metrics_output:
-                display(fig)
+                interactive_display(fig)
                 print(results_df)
 
         comp_button = Button(description="Compute Metrics")
         comp_button.on_click(compute_metrics)
         ooo = VBox([comp_button, metrics_output])
-        display(ooo)
+        interactive_display(ooo)
+        if auto_compute_metrics:
+            compute_metrics()
+
         return time_offsets
 
 def header(sub):

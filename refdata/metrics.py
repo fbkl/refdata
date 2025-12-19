@@ -776,11 +776,15 @@ class Dismissed():
 
     def manual_segmentation(self, list_of_things):
         for iSL, (ls, rs) in zip(self.slumplist, list_of_things):
-            iSL.manual_split(ls, rs)
+            if not iSL.segmented:
+                logger.warning("applying manual segmentation")
+                iSL.manual_split(ls, rs)
     
     def which_steps_do_i_plot(self, list_of_things):
         for iSL, (ls, rs) in zip(self.slumplist, list_of_things):
-            iSL.manual_set_valid_id_so(ls, rs)
+            if not iSL.autovalid:
+                logger.warning(f"setting which steps do I plot for all the trials of this action {self.action}")
+                iSL.manual_set_valid_id_so(ls, rs)
     
     def gen_action_plots(self, gtype, iomtype, conv_names= None, ref=None):
         
@@ -1010,6 +1014,8 @@ from .refdata import each_side_plot_meat
 class SyncedLump(): ## dont get distracted. a lump is a trial 
     #with all the data from all the sources okay
     def __init__(self, imuLump, mocapLump, weight, save_fig_dir="./", index=-1, action="unknown"):
+        self.segmented = False
+        self.autovalid = True
         self.weight = weight
         self.index = index
         self.save_fig_dir=save_fig_dir
@@ -1021,11 +1027,11 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
         self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfr", index=index)
         self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="id", index=index)
         self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="so", index=index)
-       
         if self.action in ["walking", "gait", "running"]:
             
             self.grf_split_me()
             self.update_from_splits()
+            self.autovalid = False
 
     def manual_split(self, l_segs, r_segs):
 
@@ -1053,6 +1059,7 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
         self.ik.rebork()
         for sti  in [self.grfl, self.grfr, self.id, self.so]:
             sti.mask_from(self.ik)
+        self.segmented = True
     def grf_split_me(self):
         zero_time = 0
         self.step_seg_l_list = each_side_plot_meat(self.grfl.imu_resampled, self.grfl.imu_resampled.index,zero_time,grf_name_prefix = "1_ground_", side="Left", weight=self.weight, do_plot=False)

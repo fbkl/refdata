@@ -36,7 +36,7 @@ class HandlerMyTuple(HandlerTuple):
         #self.update_prop(p, orig_handle, legend)
         #p.set_transform(trans)
         if len(orig_handle)==30:
-            print(dir(orig_handle[0]))
+            #print(dir(orig_handle[0]))
             p = Line2D([0,10],[0,1], color=orig_handle[0].get_color(),style=orig_handle[0].get_)
             p.set_transform(trans)
             return [p]
@@ -124,14 +124,14 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     id_short_conv_names = refdata.graph_params.get_id_graph_params(weight)
     id_conv_names_sag = refdata.graph_params.sagittal_only(refdata.graph_params.get_id_standard_graph_params(weight))
     so_conv_names = refdata.graph_params.get_so_graph_params()
-    #ccc = refdata.graph_params.get_so_short_graph_params(use_paper_list=True, use_rename_list=False)
-    ccc = refdata.graph_params.get_so_short_graph_params(use_paper_list=True)
+    ccc_imu = refdata.graph_params.get_so_short_graph_params(use_paper_list=True, use_rename_list=False)
+    ccc_so = refdata.graph_params.get_so_short_graph_params(use_paper_list=True)
 
     dict_of_conv_names = {
             "grf":[ (grfconv_names, (3,3) )],
             "ik":[(ik_conv_names, (3,3)), (short_ik_conv_names, (1,3))],
             "id":[(id_conv_names, (4,3)), (id_short_conv_names, (1,3)), (id_conv_names_sag, (1,3))], 
-            "so":[(so_conv_names, (16,3)), (ccc, (2,3))]
+            "so":[((so_conv_names,so_conv_names), (16,3)), ((ccc_imu, ccc_so), (2,3))]
             }
 
     ## untested!
@@ -155,7 +155,10 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                 if mode== "grf"  and stream == "mocap":
                     ## i can load the emg here for so and maybe do something for force plate idk
                     continue
-                all_XXX_curves_for_this_person[j] = mySL.gen_action_plots(mode,stream, conv_names = conv_name_i)
+                conv_name_to_use = conv_name_i
+                if mode=="so":
+                    conv_name_to_use = conv_name_i[j] ## hack because the names are different. if it still doesnt work, try changing the order in line 127,128
+                all_XXX_curves_for_this_person[j] = mySL.gen_action_plots(mode,stream, conv_names = conv_name_to_use)
 
                 curves_dictionary[mode+"_"+stream+"_"+str(i)] = all_XXX_curves_for_this_person[j]
                 asRefData[j] = refdata.RefData(this_action_name)
@@ -256,8 +259,29 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     fig, ax, nh, nl, cref_dic, Z = refdata.plotAX(axcurve_listXXXik, axs, fig, plot_ref_curves=True)
     #fig.legend(nh[0:2], ["Left","Right"],loc='lower right', bbox_to_anchor=(0.85, 0.18))#, loc='lower right')
     #fig.legend(nh, nl,loc='lower right', bbox_to_anchor=(0.85, 0.5))#, loc='lower right')
-    l = fig.legend([(nh[1],nh[2],nh[3]),(nh[4],nh[5],nh[6]),(nh[0], )], [r"Left $\pm$ 1 sd",r"Right $\pm$ 1 sd",r"Ref. mean $\pm$ 1 sd"], numpoints=1,
-                  handler_map={tuple: HandlerMyTuple(ndivide=None)},loc='lower right', bbox_to_anchor=(0.9, 0.2))
+    try:
+        refdata.logging.info(nh)
+        refdata.logging.info(nl)
+        ld = {}
+        for ai, bi, in zip(nl,nh):
+            ld.update({ai:bi})
+        #'EMG EX02RE 1 std ', 'Left +1 SD', 'Left -1 SD', 'Left Mean', 'Mocap EX02RE 1 std ', 'Right +1 SD', 'Right -1 SD', 'Right Mean'
+        red_ = (ld['Left +1 SD'],ld['Left Mean'],ld['Left -1 SD'])
+        blue_ = (ld['Right +1 SD'],ld['Right Mean'],ld['Right -1 SD'])
+        for ldil, ldih in ld.items():
+            if "Mocap" in ldil:
+                vi_ = (ldih)
+                break
+        for ldil, ldih in ld.items():
+            if "EMG" in ldil:
+                em_ = (ldih)
+                break
+        l = fig.legend([red_,blue_,vi_,em_], [r"Left $\pm$ 1 sd", r"Right $\pm$ 1 sd", r"Vicon Ref. mean $\pm$ 1 sd", "EMG Reference"], numpoints=1, handler_map={tuple: HandlerMyTuple(ndivide=None)},loc='lower center', bbox_to_anchor=(0.8, 0.1))
+    except:
+        traceback.print_exc()
+        refdata.logging.error("Failed to draw nice legend. You need to set the Reference colors and names correctly for this to work!")
+    #l = fig.legend([(nh[1],nh[2],nh[3]),(nh[4],nh[5],nh[6]),(nh[0], )], [r"Left $\pm$ 1 sd",r"Right $\pm$ 1 sd",r"Ref. mean $\pm$ 1 sd"], numpoints=1,
+    #              handler_map={tuple: HandlerMyTuple(ndivide=None)},loc='lower right', bbox_to_anchor=(0.9, 0.2))
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_stds.pdf', bbox_inches = 'tight')
 
@@ -279,11 +303,6 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     #l = fig.legend([(nh[1],nh[2],nh[3]),(nh[4],nh[5],nh[6]),(nh[0], )], ["Left $\pm$ 1 sd","Right $\pm$ 1 sd","Ref. mean $\pm$ 1 sd"], numpoints=1,
     #              handler_map={tuple: HandlerTuple(ndivide=None)},loc='lower right', bbox_to_anchor=(0.9, 0.2))
 
-    try:
-        l = fig.legend([(nh[0],nh[2],nh[1]),(nh[3],nh[5],nh[4]),(nh[6], ),(Z[0][-1])], [r"Left $\pm$ 1 sd", r"Right $\pm$ 1 sd", r"Vicon Ref. mean $\pm$ 1 sd", "EMG Reference"], numpoints=1, handler_map={tuple: HandlerMyTuple(ndivide=None)},loc='lower center', bbox_to_anchor=(0.8, 0.1))
-    except:
-        traceback.print_exc()
-        refdata.logging.error("Failed to draw nice legend. You need to set the Reference colors and names correctly for this to work!")
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_all.pdf', bbox_inches = 'tight')
 
     plt.close('all')

@@ -171,6 +171,7 @@ class RefData:
         self.plot_2_sd = False
         self.ref_color1 = "gray"
         self.ref_color2 = "lightgray"
+        self.is_referenceless = True
 
     def plot(self, reference_name_name= "all"):
 
@@ -225,12 +226,14 @@ class RefData:
 
         """
         logger.debug("plotting reference!")
+        if self.is_referenceless: ## we just set the name of the activity and all of this is bypassed in a lot of cases, but we dont want to flood the log with messages, so moved to debug
+            logging.debug("Set as referenceless, why did you ask to plot references if you didnt set them up?")
         if not ax:
             fig = plt.figure()
             ax = plt.gca()
 
         if not self.reference_curve_dict:
-            logger.warning("reference curve dictionary not set!")
+            logger.debug("reference curve dictionary not set!")
             return
         #plt.figure()
         #plt.title(reference_name)
@@ -287,7 +290,8 @@ class RefData:
 
 
         else:
-            logging.warn("I dont have the reference %s"%reference_name)
+            if not self.is_referenceless:
+                logging.warn("I dont have the reference %s"%reference_name)
         #plt.legend()
         #plt.show()            
     def append_curves(self,otherRefData):
@@ -314,6 +318,7 @@ def latex_friendly_column_names(name):
 class GaitNormativeRefData(RefData):
     def __init__(self, own_action_name="gait"):
         RefData.__init__(self,own_action_name)
+        self.is_referenceless = False
     def set_from_sheet(self, sheet_name=None):
         if not sheet_name:
             raise(ValueError("need sheet_name"))
@@ -556,6 +561,10 @@ def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, al
                 joint_or_muscle_name_suffix = ["_l","_r"]
             else:
                 logger.error(f"Could not find {joint_or_muscle_name} in source data!")
+                logger.error(joint_or_muscle_name+"_l"+curve_suffix)
+                logger.error(joint_or_muscle_name+"_r"+curve_suffix)
+                logger.error(curve_suffix)
+                logger.error(f"\tAvailable are: {data.columns}")
                 continue ## I think...
             if ref_name["plot_it"]:
                 logger.debug(joint_or_muscle_name_suffix)
@@ -896,7 +905,7 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
             except BaseException as e:
                 logger.error(f"could not plot {name}, {ref_name['name']} {e.what}")
             ax.set_title(ref_name["title"])
-            ax.set(xlabel=f"\MakeUppercase {action_type} cycle [\%]", ylabel=ref_name["yaxis_name"])
+            ax.set(xlabel=rf"\MakeUppercase {action_type} cycle [\%]", ylabel=ref_name["yaxis_name"])
             ax.set_ylim(ref_name["axes_limits"])
             handles, labels = ax.get_legend_handles_labels()
             all_handles.extend(handles)
@@ -929,7 +938,7 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
 
 
 
-    return axs, fig, nh, nl, createRefDic
+    return axs, fig, nh, nl, createRefDic, (all_handles, all_labels)
 
 
 
@@ -1247,18 +1256,20 @@ def plotAX(some_Axs, ax, fig, plot_std=True, plot_ref_curves=False, legend=False
     
     allnh = []
     allnl = []
+    allcref = []
     allZ = []
     for axi in ax.flatten():
         axi.set_axis_off()
     for an_Ax in some_Axs:
-        _,_,nh,nl,Z = plot_std_plots(an_Ax.curves_dic, axs=ax, fig=fig, ref= an_Ax.reference, legend= False, plot_std=plot_std, plot_ref_curves=plot_ref_curves, **kwargs)
+        _,_,nh,nl, cref,Z = plot_std_plots(an_Ax.curves_dic, axs=ax, fig=fig, ref= an_Ax.reference, legend= False, plot_std=plot_std, plot_ref_curves=plot_ref_curves, **kwargs)
         allnh.extend(nh)
         allnl.extend(nl)
+        allcref.extend(cref)
         allZ.extend(Z)
     allnh, allnl = remove_repeated(allnh, allnl) 
     if legend:
         fig.legend(allnh, allnl,loc='lower right', bbox_to_anchor=(0.85, 0.18))
-    return fig, ax, allnh, allnl, allZ
+    return fig, ax, allnh, allnl, allcref, allZ
        
 
        

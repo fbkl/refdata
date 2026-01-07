@@ -15,6 +15,61 @@ reload(metrics)
 import glob
 import matplotlib as mpl
 from matplotlib.legend_handler import HandlerLine2D, HandlerTuple
+import traceback
+
+from matplotlib.lines import Line2D
+from itertools import cycle
+from matplotlib.legend_handler import HandlerLine2D, HandlerTuple
+class HandlerMyTuple(HandlerTuple):
+    
+    def create_artists(self, legend, orig_handle,
+                       xdescent, ydescent, width, height, fontsize, trans):
+        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
+       
+
+        print(orig_handle)
+        #p = mpatches.
+        #p = mpatches.Shadow()
+        #p2 = mpatches.Ellipse(xy=center, width=width + xdescent,
+        #                     height=height + ydescent-10)
+        #p = nh[0]
+        #self.update_prop(p, orig_handle, legend)
+        #p.set_transform(trans)
+        if len(orig_handle)==30:
+            print(dir(orig_handle[0]))
+            p = Line2D([0,10],[0,1], color=orig_handle[0].get_color(),style=orig_handle[0].get_)
+            p.set_transform(trans)
+            return [p]
+        else:
+            # docstring inherited
+            handler_map = legend.get_legend_handler_map()
+    
+            if self._ndivide is None:
+                ndivide = len(orig_handle)
+            else:
+                ndivide = self._ndivide
+    
+            if self._pad is None:
+                pad = legend.borderpad * fontsize
+            else:
+                pad = self._pad * fontsize
+    
+            if ndivide > 1:
+                height = (height - pad * (ndivide - 1)) / ndivide
+    
+            yds_cycle = cycle(ydescent - (height + pad) * np.arange(ndivide))
+    
+            a_list = []
+            for handle1 in orig_handle:
+                handler = legend.get_legend_handler(handler_map, handle1)
+                _a_list = handler.create_artists(
+                    legend, handle1,
+                     xdescent, next(yds_cycle), width, height, fontsize, trans)
+                a_list.extend(_a_list)
+    
+            return a_list
+
+
 
 from refdata.my_log import vlog
 def ptupl(t):
@@ -69,7 +124,8 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     id_short_conv_names = refdata.graph_params.get_id_graph_params(weight)
     id_conv_names_sag = refdata.graph_params.sagittal_only(refdata.graph_params.get_id_standard_graph_params(weight))
     so_conv_names = refdata.graph_params.get_so_graph_params()
-    ccc = refdata.graph_params.get_so_short_graph_params(use_paper_list=True, use_rename_list=False)
+    #ccc = refdata.graph_params.get_so_short_graph_params(use_paper_list=True, use_rename_list=False)
+    ccc = refdata.graph_params.get_so_short_graph_params(use_paper_list=True)
 
     dict_of_conv_names = {
             "grf":[ (grfconv_names, (3,3) )],
@@ -93,6 +149,9 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
             RR = [None, None]
             for j, stream in enumerate(["imu", "mocap"]):
                 print("¤"*80)
+                reference_caption = f"{stream.capitalize()} {subject_num}"
+                if mode== "so"  and stream == "mocap":
+                    reference_caption = f"EMG {subject_num}"
                 if mode== "grf"  and stream == "mocap":
                     ## i can load the emg here for so and maybe do something for force plate idk
                     continue
@@ -102,10 +161,9 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                 asRefData[j] = refdata.RefData(this_action_name)
                 for std_or_not, std_str in [(False, "all"), (True, "std")]:
                     print("<>"*80)
-                    RR[j] = refdata.plot_std_plots(all_XXX_curves_for_this_person[j], plot_std=std_or_not, ref=asRefData[j],
-                               subplot_grid = fig_size,)
+                    RR[j] = refdata.plot_std_plots(all_XXX_curves_for_this_person[j], plot_std=std_or_not, ref=asRefData[j], subject_identifier=reference_caption, subplot_grid = fig_size,)
                     plt.savefig(my_dir+f'/{mode}/sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
-
+                    refdata.plt.close()
                     
                 ## i dont think it makes a difference if it is std or all for the gencurves thing
                 asRefData[j].reference_curve_dict = RR[j][4]
@@ -116,11 +174,11 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
             print("A"*80)
 
             ## maybe i need to check something 
-            _ = refdata.plot_std_plots(all_XXX_curves_for_this_person[0], plot_std=False, ref=asRefData[1],
-                               subplot_grid = fig_size,)
+            _ = refdata.plot_std_plots(all_XXX_curves_for_this_person[0], plot_std=False, ref=asRefData[1], subplot_grid = fig_size,)
 
             print("B"*80)
             plt.savefig(my_dir+f'{mode}/sub{subject_num}_{mode}_{this_action_name}_imu_mocap_ref_{ptupl(fig_size)}_all{i}.pdf', bbox_inches = 'tight')
+            refdata.plt.close()
 
         
 
@@ -132,7 +190,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     axcurve_list = refdata.creat_axs(curves_dictionary["ik_imu_0"], ref= curves_dictionary["ik_mocap_0_ref"])
 
     fig, ax =  refdata.create_axs_dimensions(3,3) 
-    fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list, ax, fig)
+    fig, ax, nl, legend, cref_dic, Z = refdata.plotAX(axcurve_list, ax, fig)
 
     fig.legend(nl, legend,loc='center left', bbox_to_anchor=(1, 0.5))
 
@@ -143,10 +201,11 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     fig, ax =  refdata.create_axs_dimensions(8,3) 
 
-    fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list, ax, fig)
+    fig, ax, nl, legend, cref_dic,Z = refdata.plotAX(axcurve_list, ax, fig)
 
     #axcurve_list_so2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=refdata.SoData(this_action_name)),6)
     axcurve_list_so2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=curves_dictionary["so_mocap_1_ref"]),6)
+    axcurve_list.extend(axcurve_list_so2)
     print("C"*80)
 
 
@@ -156,11 +215,12 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     fig, axs = refdata.create_axs_dimensions(8, 3, margin= 1.5, header = 1.2, subheigth = 6, subwidth= 6)
 
     #refdata.plt.rcParams['figure.figsize'] = [12, 4]
-    #axcurve_list.extend(axcurve_list_so2)
-    fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list_so2, axs, fig)
+    #fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list, axs, fig)
+    fig, ax, nl, legend, cref_dic, Z = refdata.plotAX(axcurve_list, axs, fig, plot_ref_curves=True)
 
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}8x3_tighter_stds.pdf', bbox_inches = 'tight')
+    refdata.plt.close()
     # In[ ]:
 
 
@@ -173,17 +233,19 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
         axcurve_listXXXso = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=refdata.SoData(this_action_name)),2)
     
+    curves_dictionary["ik_mocap_1_ref"].ref_color1 = 'silver'
+    curves_dictionary["id_mocap_1_ref"].ref_color1 = 'silver'
+    curves_dictionary["so_mocap_1_ref"].ref_color1 = 'darkseagreen'
 
-    axcurve_listXXXik = refdata.creat_axs(curves_dictionary["ik_imu_1"], ref= curves_dictionary["ik_mocap_1_ref"])
+    axcurve_listXXXik =                             refdata.creat_axs(curves_dictionary["ik_imu_1"], ref= curves_dictionary["ik_mocap_1_ref"])
 
-    axcurve_listXXXid = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["id_imu_1"],ref=curves_dictionary["id_mocap_1_ref"]),1)
+    axcurve_listXXXid = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["id_imu_1"], ref= curves_dictionary["id_mocap_1_ref"]),1)
 
-    axcurve_listXXXso = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=curves_dictionary["so_mocap_1_ref"]),2)
+    axcurve_listXXXso = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"], ref= curves_dictionary["so_mocap_1_ref"]),2)
+
 
     axcurve_listXXXik.extend(axcurve_listXXXid)
     axcurve_listXXXik.extend(axcurve_listXXXso)
-
-
 
     mpl.rcParams['figure.dpi'] = 300
 
@@ -191,11 +253,11 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     for ax in axs.flatten():
         ax.set_axis_off()
 
-    fig, ax, nh, nl, cref_dic = refdata.plotAX(axcurve_listXXXik, axs, fig, plot_ref_curves=True)
+    fig, ax, nh, nl, cref_dic, Z = refdata.plotAX(axcurve_listXXXik, axs, fig, plot_ref_curves=True)
     #fig.legend(nh[0:2], ["Left","Right"],loc='lower right', bbox_to_anchor=(0.85, 0.18))#, loc='lower right')
     #fig.legend(nh, nl,loc='lower right', bbox_to_anchor=(0.85, 0.5))#, loc='lower right')
     l = fig.legend([(nh[1],nh[2],nh[3]),(nh[4],nh[5],nh[6]),(nh[0], )], [r"Left $\pm$ 1 sd",r"Right $\pm$ 1 sd",r"Ref. mean $\pm$ 1 sd"], numpoints=1,
-                  handler_map={tuple: HandlerTuple(ndivide=None)},loc='lower right', bbox_to_anchor=(0.9, 0.2))
+                  handler_map={tuple: HandlerMyTuple(ndivide=None)},loc='lower right', bbox_to_anchor=(0.9, 0.2))
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_stds.pdf', bbox_inches = 'tight')
 
@@ -209,13 +271,19 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     for ax in axs.flatten():
         ax.set_axis_off()
 
-    fig, ax, nh, nl, cref_dic = refdata.plotAX(axcurve_listXXXik, axs, fig, plot_ref_curves=True, plot_std=False, legend=True)
-    print(nl)
+    fig, ax, nh, nl, cref_dic, Z = refdata.plotAX(axcurve_listXXXik, axs, fig, plot_ref_curves=True, plot_std=False, legend=True)
+    #print(nl)
+    #print(Z)
     #fig.legend(nh[0:2], ["Left","Right"],loc='lower right', bbox_to_anchor=(0.85, 0.18))#, loc='lower right')
     #fig.legend(nh, nl,loc='lower right', bbox_to_anchor=(0.85, 0.5))#, loc='lower right')
     #l = fig.legend([(nh[1],nh[2],nh[3]),(nh[4],nh[5],nh[6]),(nh[0], )], ["Left $\pm$ 1 sd","Right $\pm$ 1 sd","Ref. mean $\pm$ 1 sd"], numpoints=1,
     #              handler_map={tuple: HandlerTuple(ndivide=None)},loc='lower right', bbox_to_anchor=(0.9, 0.2))
 
+    try:
+        l = fig.legend([(nh[0],nh[2],nh[1]),(nh[3],nh[5],nh[4]),(nh[6], ),(Z[0][-1])], [r"Left $\pm$ 1 sd", r"Right $\pm$ 1 sd", r"Vicon Ref. mean $\pm$ 1 sd", "EMG Reference"], numpoints=1, handler_map={tuple: HandlerMyTuple(ndivide=None)},loc='lower center', bbox_to_anchor=(0.8, 0.1))
+    except:
+        traceback.print_exc()
+        refdata.logging.error("Failed to draw nice legend. You need to set the Reference colors and names correctly for this to work!")
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_all.pdf', bbox_inches = 'tight')
 
     plt.close('all')

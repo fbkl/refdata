@@ -4,6 +4,12 @@
 
 import logging
 
+from rich.logging import RichHandler
+logging.basicConfig(format='%(funcName)s: %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S', 
+                    handlers=[RichHandler()],
+                    level=logging.INFO)
+
 CONTEXT = "NOT SET"
 
 class CustomFormatter(logging.Formatter):
@@ -58,11 +64,6 @@ ch.setFormatter(CustomFormatter())
 logger.addHandler(ch)
 logger.propagate = False
 
-from rich.logging import RichHandler
-logging.basicConfig(format='%(funcName)s: %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S', 
-                    handlers=[RichHandler()],
-                    level=logging.INFO)
 
 def vlog(var_name: str, level=logging.INFO):
     """Log a variable with its name and value from the caller's scope"""

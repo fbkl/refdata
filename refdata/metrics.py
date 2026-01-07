@@ -4,7 +4,9 @@ import numpy as np
 from scipy import signal, stats
 from scipy.spatial.transform import Rotation as R
 from . import my_log
+import traceback
 
+logging = my_log.logging
 logger = my_log.logger
 
 vv = my_log.vlog
@@ -221,6 +223,8 @@ class SyncedTrials:
         self.mode = mode
         self.index = index
         self.save_fig_dir=save_fig_dir
+        my_stack = "".join(traceback.format_stack())
+        #logging.error(f"SyncedTrials savefigdir: {self.save_fig_dir}\n{my_stack}")
         self.output = nullcontext()
         self.my_files = [imu_files, mocap_files]
 
@@ -649,6 +653,11 @@ class SyncedTrials:
             print(valid_l)
             print(valid_r)
             interactive_display(self.fig)
+            if self.save_fig_dir == "./":
+                logging.error(self.save_fig_dir)
+                err = traceback.format_stack()
+                logging.error(f" this directory needs to be set!\n{"".join(err)}")
+                logger.warning("saving sync figures in current directory")
             self.fig.savefig(f"{self.save_fig_dir}/sync{self.mode}{self.index}.png")
             if not interactive:
                 plt.close(self.fig)
@@ -771,6 +780,7 @@ class Dismissed():
             this_SL = SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i, action= self.action)
             if sync_Li[0] or sync_Li[1]:
                 logger.warning("Using external segmentation for actions!!!")
+                #logging.error(this_SL.save_fig_dir)
                 this_SL.manual_split(sync_Li[0], sync_Li[1])
             self.slumpList.append(this_SL)
 
@@ -1029,7 +1039,8 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
         self.weight = weight
         self.index = index
         self.save_fig_dir=save_fig_dir
-        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True, mode="ik", index=index) ## this will be automatically synced
+        #logging.error(self.save_fig_dir)
+        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True, save_fig_dir=self.save_fig_dir, mode="ik", index=index) ## this will be automatically synced
         self.ik.master = True
         self.action = action
         self.lag = self.ik.time_offset
@@ -1044,6 +1055,7 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
             self.autovalid = False
 
     def manual_split(self, l_segs, r_segs):
+        #logging.error(self.save_fig_dir)
 
         self.step_seg_l_list = l_segs
         self.step_seg_r_list = r_segs

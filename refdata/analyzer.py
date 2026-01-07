@@ -47,6 +47,8 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir, action=this_action_name)
 
+    refdata.logging.info(mySL.save_fig_dir)
+
     mySL.set_by_two_lists_of_lumps(myImuLumpList, myMocapLumpList, ext_sync )
 
     
@@ -82,6 +84,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     curves_dictionary = {}
 
     for mode in ["grf", "ik", "id", "so"]:
+        os.makedirs(my_dir+f"/{mode}/")
         print("#"*80)
         for i, (conv_name_i, fig_size) in enumerate(dict_of_conv_names[mode]):
             print("x"*80)
@@ -96,18 +99,19 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                 all_XXX_curves_for_this_person[j] = mySL.gen_action_plots(mode,stream, conv_names = conv_name_i)
 
                 curves_dictionary[mode+"_"+stream+"_"+str(i)] = all_XXX_curves_for_this_person[j]
+                asRefData[j] = refdata.RefData(this_action_name)
                 for std_or_not, std_str in [(False, "all"), (True, "std")]:
                     print("<>"*80)
-                    RR[j] = refdata.plot_std_plots(all_XXX_curves_for_this_person[j], plot_std=std_or_not, ref=None,
+                    RR[j] = refdata.plot_std_plots(all_XXX_curves_for_this_person[j], plot_std=std_or_not, ref=asRefData[j],
                                subplot_grid = fig_size,)
-                    plt.savefig(my_dir+f'sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
+                    plt.savefig(my_dir+f'/{mode}/sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
 
                     
                 ## i dont think it makes a difference if it is std or all for the gencurves thing
-                asRefData[j] = refdata.RefData(this_action_name)
                 asRefData[j].reference_curve_dict = RR[j][4]
 
-                pickle.dump(all_XXX_curves_for_this_person[j],open(my_dir+f"{mode}{this_action_name}{subject_num}_{stream}{i}.p","wb"))
+                curves_dictionary[mode+"_"+stream+"_"+str(i)+"_ref"] = asRefData[j]
+                pickle.dump(all_XXX_curves_for_this_person[j],open(my_dir+f"/{mode}/{mode}{this_action_name}{subject_num}_{stream}{i}.p","wb"))
 
             print("A"*80)
 
@@ -116,7 +120,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                                subplot_grid = fig_size,)
 
             print("B"*80)
-            plt.savefig(my_dir+f'sub{subject_num}_{mode}_{this_action_name}_imu_mocap_ref_{ptupl(fig_size)}_all{i}.pdf', bbox_inches = 'tight')
+            plt.savefig(my_dir+f'{mode}/sub{subject_num}_{mode}_{this_action_name}_imu_mocap_ref_{ptupl(fig_size)}_all{i}.pdf', bbox_inches = 'tight')
 
         
 
@@ -124,14 +128,16 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
 
     plt.rcParams['figure.figsize'] = [8, 10]
-    axcurve_list = refdata.creat_axs(curves_dictionary["ik_imu_0"], ref= refdata.GaitIKRefData(this_action_name))
+    #axcurve_list = refdata.creat_axs(curves_dictionary["ik_imu_0"], ref= refdata.GaitIKRefData(this_action_name))
+    axcurve_list = refdata.creat_axs(curves_dictionary["ik_imu_0"], ref= curves_dictionary["ik_mocap_0_ref"])
 
     fig, ax =  refdata.create_axs_dimensions(3,3) 
     fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list, ax, fig)
 
     fig.legend(nl, legend,loc='center left', bbox_to_anchor=(1, 0.5))
 
-    axcurve_list_id2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["id_imu_0"]),3)
+    #axcurve_list_id2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["id_imu_0"], ref=refdata.IdData(this_action_name)),3)
+    axcurve_list_id2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["id_imu_0"], ref=curves_dictionary["id_mocap_0_ref"]),3)
 
     axcurve_list.extend(axcurve_list_id2)
 
@@ -139,8 +145,8 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list, ax, fig)
 
-    axcurve_list_so2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"]
-                                                                     ,ref=refdata.SoData(this_action_name)),6)
+    #axcurve_list_so2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=refdata.SoData(this_action_name)),6)
+    axcurve_list_so2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=curves_dictionary["so_mocap_1_ref"]),6)
     print("C"*80)
 
 
@@ -160,11 +166,19 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     ### This is the version for the paper
 
-    axcurve_listXXXik = refdata.creat_axs(curves_dictionary["ik_imu_1"], ref= refdata.GaitIKRefData(this_action_name))
+    if False:
+        axcurve_listXXXik = refdata.creat_axs(curves_dictionary["ik_imu_1"], ref= refdata.GaitIKRefData(this_action_name))
 
-    axcurve_listXXXid = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["id_imu_1"]),1)
+        axcurve_listXXXid = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["id_imu_1"],ref=refdata.IdData(this_action_name)),1)
 
-    axcurve_listXXXso = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=refdata.SoData(this_action_name)),2)
+        axcurve_listXXXso = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=refdata.SoData(this_action_name)),2)
+    
+
+    axcurve_listXXXik = refdata.creat_axs(curves_dictionary["ik_imu_1"], ref= curves_dictionary["ik_mocap_1_ref"])
+
+    axcurve_listXXXid = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["id_imu_1"],ref=curves_dictionary["id_mocap_1_ref"]),1)
+
+    axcurve_listXXXso = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=curves_dictionary["so_mocap_1_ref"]),2)
 
     axcurve_listXXXik.extend(axcurve_listXXXid)
     axcurve_listXXXik.extend(axcurve_listXXXso)

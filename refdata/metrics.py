@@ -766,22 +766,23 @@ class Dismissed():
         self.save_fig_dir = save_fig_dir
         self.action = action
 
-    def set_by_two_lists_of_lumps(self, imuLs, mocapLs, ext_sync = [None,None]):
-        for i, (a, b) in enumerate(zip(imuLs, mocapLs)):
+    def set_by_two_lists_of_lumps(self, imuLs, mocapLs, extSyncLs):
+        for i, (a, b, sync_Li) in enumerate(zip(imuLs, mocapLs, extSyncLs)):
             this_SL = SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i, action= self.action)
-            if ext_sync[0] or ext_sync[1]:
+            if sync_Li[0] or sync_Li[1]:
                 logger.warning("Using external segmentation for actions!!!")
-                this_SL.manual_split(ext_sync[0], ext_sync[1])
+                this_SL.manual_split(sync_Li[0], sync_Li[1])
             self.slumpList.append(this_SL)
 
-    def manual_segmentation(self, list_of_things):
-        for iSL, (ls, rs) in zip(self.slumplist, list_of_things):
-            if not iSL.segmented:
-                logger.warning("applying manual segmentation")
-                iSL.manual_split(ls, rs)
+    ## I think i did the same thing twice
+    #def manual_segmentation(self, list_of_things):
+    #    for iSL, (ls, rs) in zip(self.slumpList, list_of_things):
+    #        if not iSL.segmented:
+    #            logger.warning("applying manual segmentation")
+    #            iSL.manual_split(ls, rs)
     
     def which_steps_do_i_plot(self, list_of_things):
-        for iSL, (ls, rs) in zip(self.slumplist, list_of_things):
+        for iSL, (ls, rs) in zip(self.slumpList, list_of_things):
             if not iSL.autovalid:
                 logger.warning(f"setting which steps do I plot for all the trials of this action {self.action}")
                 iSL.manual_set_valid_id_so(ls, rs)
@@ -859,6 +860,9 @@ class Dismissed():
         ui_list = []
         common_joints = []
 
+        if len(sTrials) == 0:
+            logger.fatal("You have no Trials to run_analysis on!!!!!!")
+            return
         for sTiii in sTrials:
 
             if not common_joints:
@@ -890,6 +894,12 @@ class Dismissed():
             included_joints.append(joint)
         cols = 2
         rows = int(np.ceil(len(included_joints)/cols)) 
+        print("o.O"*100)
+        if len(common_joints) == 0:
+            logger.error("No common joints????")
+        if len(included_joints) == 0:
+            logger.error("No included joints????")
+        logger.debug(rows)
         with metrics_output:
             metrics_output.clear_output()
             fig, ax = plt.subplots(rows,cols, figsize= (10,2.5*rows), constrained_layout= True)

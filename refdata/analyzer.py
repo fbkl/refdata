@@ -35,7 +35,7 @@ def make_dir(base):
     os.makedirs(path)
     return path
 
-def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None, ext_sync = [None,None], manual_segmentation_list_list= [], valid_step_list_list=[]):
+def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None, ext_sync = [], valid_step_list_list=[]):
     
     plt.close('all')
     
@@ -45,11 +45,12 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     my_dir = os.path.join(results_dir,subject_num, this_action_name) + "/"
     os.makedirs(my_dir)
 
-    mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir, ext_sync = [None,None], action=this_action_name)
+    mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir, action=this_action_name)
 
-    mySL.set_by_two_lists_of_lumps(myImuLumpList, myMocapLumpList    )
+    mySL.set_by_two_lists_of_lumps(myImuLumpList, myMocapLumpList, ext_sync )
 
-    mySL.manual_segmentation(manual_segmentation_list_list)
+    
+    #mySL.manual_segmentation(manual_segmentation_list_list)
     
     mySL.run_analysis("id")
 

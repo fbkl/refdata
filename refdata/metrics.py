@@ -450,6 +450,23 @@ class SyncedTrials:
         else:
             self.mocap_resampled = None
 
+
+        if is_ik and self.get_roted_fun:
+            logger.info(f"I am ik and will try to get_roted {repr(self.my_files)}")
+            if valid(self.imu_resampled):
+                logger.info("imu is valid attempting rotation")
+                self.imu_resampled = self.get_roted_fun(self.imu_resampled, is_mocap=False)
+                if do_rename:
+                    self.imu_resampled = self.imu_resampled.rename(columns=inverted_map_i)
+            if valid(self.mocap_resampled):
+                logger.info("mocap is valid attempting rotation")
+                self.mocap_resampled = self.get_roted_fun(self.mocap_resampled, is_mocap=True)
+                if do_rename:
+                    self.mocap_resampled = self.mocap_resampled.rename(columns=inverted_map_i)
+        else:
+            logger.info(f"I am NOT ik and will NOT try to get_roted {repr(self.my_files)}")
+
+        # we need to compute common joints after the double rename
         if valid(imu_data[0]) and valid(mocap_data[0]):
             logger.warning("this should be done with a mapped one to one, easier said then done though")
             all_common_joints = [col for col in self.imu_resampled.columns if col in self.mocap_resampled.columns]
@@ -468,22 +485,6 @@ class SyncedTrials:
             self.common_joints = []
     
         #common_joints
-
-        if is_ik and self.get_roted_fun:
-            logger.info(f"I am ik and will try to get_roted {repr(self.my_files)}")
-            if valid(self.imu_resampled):
-                logger.info("imu is valid attempting rotation")
-                self.imu_resampled = self.get_roted_fun(self.imu_resampled, is_mocap=False)
-                if do_rename:
-                    self.imu_resampled = self.imu_resampled.rename(columns=inverted_map_i)
-            if valid(self.mocap_resampled):
-                logger.info("mocap is valid attempting rotation")
-                self.mocap_resampled = self.get_roted_fun(self.mocap_resampled, is_mocap=True)
-                if do_rename:
-                    self.mocap_resampled = self.mocap_resampled.rename(columns=inverted_map_i)
-        else:
-            logger.info(f"I am NOT ik and will NOT try to get_roted {repr(self.my_files)}")
-
 
         ### this is the time shifting, should be a function, but i am corrupting the mocap_resampled and the mask_mocap so we cant add another slider to change it the way it is. 
 

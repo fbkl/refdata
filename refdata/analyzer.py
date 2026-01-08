@@ -6,6 +6,7 @@ import os, sys
 sys.path.append("../refdata")
 from refdata import refdata
 from refdata import metrics
+from refdata import my_log
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
@@ -94,6 +95,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     
     my_dir = os.path.join(results_dir,subject_num, this_action_name) + "/"
     os.makedirs(my_dir)
+    my_log.CONTEXT = f"{subject_num} {this_action_name} {my_dir}"
 
     mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir, action=this_action_name, get_roted_fun=get_roted_fun)
 
@@ -137,14 +139,14 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     for mode in ["grf", "ik", "id", "so"]:
         os.makedirs(my_dir+f"/{mode}/")
-        print("#"*80)
+        ptupl(mode)
         for i, (conv_name_i, fig_size) in enumerate(dict_of_conv_names[mode]):
-            print("x"*80)
+            ptupl(conv_name_i)
             asRefData = [None,None]
             all_XXX_curves_for_this_person = [None, None]
             RR = [None, None]
             for j, stream in enumerate(["imu", "mocap"]):
-                print("¤"*80)
+                ptupl(stream)
                 reference_caption = f"{stream.capitalize()} {subject_num}"
                 if mode== "so"  and stream == "mocap":
                     reference_caption = f"EMG {subject_num}"
@@ -159,7 +161,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                 curves_dictionary[mode+"_"+stream+"_"+str(i)] = all_XXX_curves_for_this_person[j]
                 asRefData[j] = refdata.RefData(this_action_name)
                 for std_or_not, std_str in [(False, "all"), (True, "std")]:
-                    print("<>"*80)
+                    ptupl(std_str)
                     RR[j] = refdata.plot_std_plots(all_XXX_curves_for_this_person[j], plot_std=std_or_not, ref=asRefData[j], subject_identifier=reference_caption, subplot_grid = fig_size,)
                     plt.savefig(my_dir+f'/{mode}/sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
                     refdata.plt.close()
@@ -170,12 +172,12 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                 curves_dictionary[mode+"_"+stream+"_"+str(i)+"_ref"] = asRefData[j]
                 pickle.dump(all_XXX_curves_for_this_person[j],open(my_dir+f"/{mode}/{mode}{this_action_name}{subject_num}_{stream}{i}.p","wb"))
 
-            print("A"*80)
+            ptupl("Imu + Mocap")
 
             ## maybe i need to check something 
             _ = refdata.plot_std_plots(all_XXX_curves_for_this_person[0], plot_std=False, ref=asRefData[1], subplot_grid = fig_size,)
 
-            print("B"*80)
+            ptupl("Saving IMU + Mocap")
             plt.savefig(my_dir+f'{mode}/sub{subject_num}_{mode}_{this_action_name}_imu_mocap_ref_{ptupl(fig_size)}_all{i}.pdf', bbox_inches = 'tight')
             refdata.plt.close()
 
@@ -205,7 +207,6 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     #axcurve_list_so2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=refdata.SoData(this_action_name)),6)
     axcurve_list_so2 = refdata.apply_offset_to_axs(refdata.creat_axs(curves_dictionary["so_imu_1"],ref=curves_dictionary["so_mocap_1_ref"]),6)
     axcurve_list.extend(axcurve_list_so2)
-    print("C"*80)
 
 
     # In[ ]:
@@ -217,6 +218,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     #fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list, axs, fig)
     fig, ax, nl, legend, cref_dic, Z = refdata.plotAX(axcurve_list, axs, fig, plot_ref_curves=True)
 
+    ptupl("8x3")
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}8x3_tighter_stds.pdf', bbox_inches = 'tight')
     refdata.plt.close()
@@ -281,7 +283,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_stds.pdf', bbox_inches = 'tight')
 
-
+    ptupl("paper_version")
     # ## This is the sagital plane with calf muscles with all. maybe goes in appendix paper
 
     # In[ ]:
@@ -301,5 +303,6 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_all.pdf', bbox_inches = 'tight')
 
+    ptupl("all curves, sort of unformatted")
     plt.close('all')
     return results_dir

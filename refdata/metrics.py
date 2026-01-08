@@ -257,7 +257,7 @@ def valid(maybe_df):
 
 from contextlib import nullcontext
 
-def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes=["_tx","_ty","_tz","time"]):
+def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes=["_tx","_ty","_tz",""]):
     """
     Convert angular columns in dataframe between degrees and radians.
     
@@ -267,7 +267,7 @@ def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes
         Input dataframe
     in_degrees : bool
         If True, converts FROM degrees TO radians
-        If False, converts FROM radians TO degrees
+        If False, DOES NOTHING!!!!!!! FREAKING CLAUDE
     skip_columns_with_suffixes : list
         Column suffixes to skip (e.g., translations)
     
@@ -293,10 +293,7 @@ def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes
     if in_degrees:
         # degrees -> radians
         corrected_df[cols_to_convert] = np.deg2rad(corrected_df[cols_to_convert])
-    else:
-        # radians -> degrees
-        corrected_df[cols_to_convert] = np.rad2deg(corrected_df[cols_to_convert])
-    
+
     return corrected_df
 
 

@@ -35,7 +35,7 @@ def interactive_display(ui_control):
     if interactive:
         display(ui_control)
 
-def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False, angle_cols=['pelvis_tilt', 'pelvis_list', 'pelvis_rotation']):
+def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False, angle_cols=[PA, PB, 'pelvis_rotation']):
     
     """
     Removes initial yaw offset from pelvis angles.

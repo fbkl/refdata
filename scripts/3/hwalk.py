@@ -13,9 +13,9 @@ results_dir = ""
 
 get_roted_for_sts_and_squat = get_roted_from_claude_because_im_stupid
 
-#from refdata.metrics import change_do_rename
+from refdata.metrics import change_do_rename
 
-#change_do_rename()
+change_do_rename()
 
 
 def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=None):

@@ -219,7 +219,8 @@ from contextlib import nullcontext
 
 
 class SyncedTrials:
-    def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False, save_fig_dir="./", mode="unknown_mode", index=-1 ):
+    def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False, save_fig_dir="./", mode="unknown_mode", index=-1 , get_roted_fun=None):
+        self.get_roted_fun = get_roted_fun
         self.mode = mode
         self.index = index
         self.save_fig_dir=save_fig_dir
@@ -386,14 +387,14 @@ class SyncedTrials:
     
         #common_joints
 
-        if is_ik:
+        if is_ik and self.get_roted_fun:
             logger.info(f"I am ik and will try to get_roted {repr(self.my_files)}")
             if valid(self.imu_resampled):
-                logger.info("imu is valid attemptinf rotation")
-                self.imu_resampled = get_roted(self.imu_resampled)
+                logger.info("imu is valid attempting rotation")
+                self.imu_resampled = self.get_roted_fun(self.imu_resampled)
             if valid(self.mocap_resampled):
-                logger.info("mocap is valid attemptinf rotation")
-                self.mocap_resampled = get_roted(self.mocap_resampled)
+                logger.info("mocap is valid attempting rotation")
+                self.mocap_resampled = self.get_roted_fun(self.mocap_resampled)
         else:
             logger.info(f"I am NOT ik and will NOT try to get_roted {repr(self.my_files)}")
 
@@ -769,15 +770,16 @@ class Dismissed():
 
     """
 
-    def __init__(self, slumpList=[], weight=None, save_fig_dir="./", action="unknown"):
+    def __init__(self, slumpList=[], weight=None, save_fig_dir="./", action="unknown", get_roted_fun=None):
         self.slumpList = slumpList
         self.weight = weight
         self.save_fig_dir = save_fig_dir
         self.action = action
+        self.get_roted_fun = get_roted_fun
 
     def set_by_two_lists_of_lumps(self, imuLs, mocapLs, extSyncLs):
         for i, (a, b, sync_Li) in enumerate(zip(imuLs, mocapLs, extSyncLs)):
-            this_SL = SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i, action= self.action)
+            this_SL = SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i, action= self.action, get_roted_fun= self.get_roted_fun)
             if sync_Li[0] or sync_Li[1]:
                 logger.warning("Using external segmentation for actions!!!")
                 #logging.error(this_SL.save_fig_dir)
@@ -935,7 +937,7 @@ class Dismissed():
                     bi = list(sTiii.get_imu_block(joint))
                     bm = list(sTiii.get_mocap_block(joint))
                     min_of_them = min([len(bi),len(bm)])
-                    print([len(bi),len(bm)])
+                    #print([len(bi),len(bm)])
                     bi = bi[:min_of_them]
                     bm = bm[:min_of_them]
                     imu_all[joint].extend(bi) 
@@ -978,10 +980,16 @@ class Dismissed():
                 results[joint] = {'RMSE': rmse, 'Pearson_r': pearson_r}
             # Make it a nice dataframe
             results_df = pd.DataFrame(results).T
+            results_df.to_csv(f"{self.save_fig_dir}/rmse_pearson.csv")
+            #logging.info("d"*40)
+            #print(results_df)
+            #logging.info("d"*40)
+            #logging.info("d"*40)
             with metrics_output:
+                #logging.info("null_context_executes_fine"*40)
                 interactive_display(fig)
                 print(results_df)
-                fig.savefig(f"{self.save_fig_dir}/allsync{self.mode}{self.index}.png")
+                fig.savefig(f"{self.save_fig_dir}/allsync{gtype}.png")
                 if not interactive:
                     plt.close(fig)
 
@@ -1033,21 +1041,22 @@ from .refdata import each_side_plot_meat
 
 class SyncedLump(): ## dont get distracted. a lump is a trial 
     #with all the data from all the sources okay
-    def __init__(self, imuLump, mocapLump, weight, save_fig_dir="./", index=-1, action="unknown"):
+    def __init__(self, imuLump, mocapLump, weight, save_fig_dir="./", index=-1, action="unknown", get_roted_fun= None):
+        self.get_roted_fun = get_roted_fun
         self.segmented = False
         self.autovalid = True
         self.weight = weight
         self.index = index
         self.save_fig_dir=save_fig_dir
         #logging.error(self.save_fig_dir)
-        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True, save_fig_dir=self.save_fig_dir, mode="ik", index=index) ## this will be automatically synced
+        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True, save_fig_dir=self.save_fig_dir, mode="ik", index=index, get_roted_fun=self.get_roted_fun) ## this will be automatically synced
         self.ik.master = True
         self.action = action
         self.lag = self.ik.time_offset
-        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfl", index=index)
-        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfr", index=index)
-        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="id", index=index)
-        self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="so", index=index)
+        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfl", index=index, get_roted_fun=self.get_roted_fun)
+        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfr", index=index, get_roted_fun=self.get_roted_fun)
+        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="id"  , index=index, get_roted_fun=self.get_roted_fun)
+        self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="so"  , index=index, get_roted_fun=self.get_roted_fun)
         if self.action in ["walking", "gait", "running"]:
             
             self.grf_split_me()

@@ -4,17 +4,12 @@
 
 import os, sys
 sys.path.append("../refdata")
-from refdata.files import sort_files
 from refdata import refdata
-from refdata.metrics import IMULump, MocapLump, SyncedLump
 from refdata import metrics
 import numpy as np
 import matplotlib.pyplot as plt
-from importlib import reload
-reload(metrics)
 import glob
 import matplotlib as mpl
-from matplotlib.legend_handler import HandlerLine2D, HandlerTuple
 import traceback
 
 from matplotlib.lines import Line2D
@@ -90,7 +85,7 @@ def make_dir(base):
     os.makedirs(path)
     return path
 
-def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None, ext_sync = [], valid_step_list_list=[]):
+def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None, ext_sync = [], valid_step_list_list=[], get_roted_fun=metrics.get_roted):
     
     plt.close('all')
     
@@ -100,7 +95,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     my_dir = os.path.join(results_dir,subject_num, this_action_name) + "/"
     os.makedirs(my_dir)
 
-    mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir, action=this_action_name)
+    mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir, action=this_action_name, get_roted_fun=get_roted_fun)
 
     refdata.logging.info(mySL.save_fig_dir)
 
@@ -109,10 +104,11 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     
     #mySL.manual_segmentation(manual_segmentation_list_list)
     
-    mySL.run_analysis("id")
+    mySL.run_analysis("ik", auto_compute_metrics=True)
 
     mySL.which_steps_do_i_plot(valid_step_list_list)
 
+    mySL.run_analysis("id", auto_compute_metrics=True)
 
     grfconv_names = []
     grfconv_names.append(refdata.graph_params.generate_grf_conv_names(0,weight))

@@ -73,7 +73,7 @@ def ptupl(t):
 
 def my_print(s):
     print("#"*(60+len(s)))
-    print("#"*30+s+"#"*30)
+    print("#"*30+repr(s)+"#"*30)
     print("#"*(60+len(s)))
 
 import pickle

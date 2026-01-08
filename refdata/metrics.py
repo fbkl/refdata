@@ -35,46 +35,49 @@ def interactive_display(ui_control):
     if interactive:
         display(ui_control)
 
-def get_roted_from_claude_because_im_stupid(df, in_degrees=False,is_mocap=False, **kwargs):
-
+def get_roted_from_claude_because_im_stupid(df, in_degrees=False, **kwargs):
     """
-    Removes initial yaw in the GLOBAL frame by:
-    1. Getting initial rotation
-    2. Decomposing to find global yaw
-    3. Removing it from all frames
-    
+    Removes initial yaw by finding what Z rotation would align
+    the initial pelvis forward direction with the global X-axis.
     """
-    angle_cols=[PA, PB, 'pelvis_rotation']
-    angles_deg = df[angle_cols].values  # shape: (n_frames, 3)
+    angle_cols = [PA, PB, 'pelvis_rotation']
     
-    # Get initial rotation as a rotation object
-    R_initial = R.from_euler('xyz', angles_deg[0], degrees=in_degrees)
+    angles = df[angle_cols].values.copy()
     
-    # Convert to rotation matrix to extract global yaw
-    # The global yaw is the rotation about world Z needed to align
-    # We can get this from the rotation matrix projection onto XY plane
-    mat = R_initial.as_matrix()
+    # Convert to radians if needed
+    if in_degrees:
+        angles = np.deg2rad(angles)
     
-    # Global yaw angle from rotation matrix
-    # This is the arctangent of the forward direction projection onto ground plane
-    global_yaw = np.arctan2(mat[1, 0], mat[0, 0])
+    # Get initial rotation
+    R_initial = R.from_euler('xyz', angles[0], degrees=False)
     
-    # Create correction rotation (rotate about global Z by -global_yaw)
-    R_yaw_correction = R.from_euler('z', -global_yaw, degrees=in_degrees)
+    # Get the forward direction vector (pelvis X-axis in global frame)
+    # This is the first column of the rotation matrix
+    forward_vector = R_initial.as_matrix()[:, 0]
     
-    # Apply correction to all frames
-    R_all = R.from_euler('xyz', angles_deg, degrees=in_degrees)
-    R_corrected = R_yaw_correction * R_all
+    # Project onto horizontal plane (ignore vertical component)
+    forward_xy = forward_vector[:2]  # [x, y]
     
-    # Convert back to Euler angles
-    corrected_angles = R_corrected.as_euler('xyz', degrees=in_degrees)
+    # Find angle this makes with global X-axis
+    global_yaw = np.arctan2(forward_xy[1], forward_xy[0])
     
-    # Return corrected dataframe
+    # Create correction: rotate about global Z to align forward with X-axis
+    R_correction = R.from_rotvec([0, 0, -global_yaw])
+    
+    # Apply to all frames
+    R_all = R.from_euler('xyz', angles, degrees=False)
+    R_corrected = R_correction * R_all
+    
+    # Convert back
+    corrected_angles = R_corrected.as_euler('xyz', degrees=False)
+    
+    if in_degrees:
+        corrected_angles = np.rad2deg(corrected_angles)
+    
     df_corrected = df.copy()
     df_corrected[angle_cols] = corrected_angles
     
     return df_corrected
-
 
 def get_roted(this_df, in_degrees=False, **kwargs):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]

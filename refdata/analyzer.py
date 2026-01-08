@@ -71,10 +71,7 @@ from refdata.my_log import vlog
 def ptupl(t):
     return f"{t[0]}x{t[1]}"
 
-def my_print(s):
-    print("#"*(60+len(s)))
-    print("#"*30+repr(s)+"#"*30)
-    print("#"*(60+len(s)))
+from metrics import header as my_print
 
 import pickle
 

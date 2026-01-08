@@ -35,48 +35,44 @@ def interactive_display(ui_control):
     if interactive:
         display(ui_control)
 
-def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False,is_mocap=False, **kwargs):
+def get_roted_from_claude_because_im_stupid(df, in_degrees=False,is_mocap=False, **kwargs):
+
+    """
+    Removes initial yaw in the GLOBAL frame by:
+    1. Getting initial rotation
+    2. Decomposing to find global yaw
+    3. Removing it from all frames
     
-    ## this is still wrong. there is a pelvis tilt flip thing going on which also affects the pelvis obliquity, idk where it comes from, it is probably some geometry thing that i am too tired to figure out. i might need to make this function a random reassignment matrix thing like 
-    #[[ 0  0  1 ]
-    # [-1  0  0 ]
-    # [ 0  1  0 ]]
-
-    # that works per trial. i dont see another way to solve this before the deadline
-
-
+    """
     angle_cols=[PA, PB, 'pelvis_rotation']
+    angles_deg = df[angle_cols].values  # shape: (n_frames, 3)
     
-    """
-    Removes initial yaw offset from pelvis angles.
-    Assumes XYZ body-fixed (intrinsic) Euler angles.
-    """
-    # Get first frame angles
-    angles_deg = this_df[angle_cols].values  # shape: (n_frames, 3)
-    initial_angles = angles_deg[0, :]
+    # Get initial rotation as a rotation object
+    R_initial = R.from_euler('xyz', angles_deg[0], degrees=in_degrees)
     
-    # Get the initial yaw offset (Z rotation)
-    initial_yaw = initial_angles[2]
+    # Convert to rotation matrix to extract global yaw
+    # The global yaw is the rotation about world Z needed to align
+    # We can get this from the rotation matrix projection onto XY plane
+    mat = R_initial.as_matrix()
     
-    # Create rotation to remove this yaw
-    # We want to rotate about Z by -initial_yaw
-    yaw_correction = R.from_euler('z', -initial_yaw, degrees=in_degrees)
+    # Global yaw angle from rotation matrix
+    # This is the arctangent of the forward direction projection onto ground plane
+    global_yaw = np.arctan2(mat[1, 0], mat[0, 0])
     
-    # Convert all frames to rotation objects (body-fixed XYZ = intrinsic 'xyz')
-    rotations = R.from_euler('yxz', angles_deg, degrees=in_degrees)
+    # Create correction rotation (rotate about global Z by -global_yaw)
+    R_yaw_correction = R.from_euler('z', -global_yaw, degrees=in_degrees)
     
-    # Apply correction: R_corrected = R_yaw_correction * R_original
-    corrected_rotations = yaw_correction * rotations
+    # Apply correction to all frames
+    R_all = R.from_euler('xyz', angles_deg, degrees=in_degrees)
+    R_corrected = R_yaw_correction * R_all
     
     # Convert back to Euler angles
-    corrected_angles = corrected_rotations.as_euler('yxz', degrees=in_degrees)
+    corrected_angles = R_corrected.as_euler('xyz', degrees=in_degrees)
     
-    # Put back in dataframe
-    df_corrected = this_df.copy()
+    # Return corrected dataframe
+    df_corrected = df.copy()
     df_corrected[angle_cols] = corrected_angles
     
-    if is_mocap: ## I cant fix this correctly with adequate math and i am growing desperate. sorry.
-        df_corrected[PB] *= -1
     return df_corrected
 
 

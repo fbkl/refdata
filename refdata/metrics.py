@@ -50,7 +50,7 @@ def interactive_display(ui_control):
     if interactive:
         display(ui_control)
 
-def get_roted_from_claude_because_im_stupid(df, in_degrees=False, **kwargs):
+def get_roted_from_claude_because_im_stupid(df, in_degrees=False, is_mocap=False, **kwargs):
     """
     Applies axis flips, swaps, and removes initial yaw offset.
     
@@ -75,14 +75,18 @@ def get_roted_from_claude_because_im_stupid(df, in_degrees=False, **kwargs):
     else:
         initial_yaw_deg = initial_yaw
 
+
+    swap_xy= False
+
     if initial_yaw_deg > 70: ## assume its 90 and the person is sort of weirdly pointing in the beginning
         flip_x, flip_y, flip_z = trial_walking_config["walking_towards_vicon"]["flip_axes"]
-        swap_xy = trial_walking_config["walking_towards_vicon"]["swap_xy"]
-        
+        if is_mocap:
+            swap_xy = trial_walking_config["walking_towards_vicon"]["swap_xy"]
     else:
         flip_x, flip_y, flip_z = trial_walking_config["walking_away_from_vicon"]["flip_axes"]
-        swap_xy = trial_walking_config["walking_away_from_vicon"]["swap_xy"]
-
+        if is_mocap:
+            swap_xy = trial_walking_config["walking_away_from_vicon"]["swap_xy"]
+        
     df_corrected = df.copy()
     angles = df_corrected[angle_cols].values.copy()
     

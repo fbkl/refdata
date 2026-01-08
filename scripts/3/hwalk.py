@@ -4,14 +4,14 @@
 import os, sys
 sys.path.append("../refdata")
 from refdata import analyzer
-from refdata.metrics import IMULump, MocapLump, get_roted, get_roted0
+from refdata.metrics import IMULump, MocapLump, get_roted, get_roted1
 from importlib import reload
 
 from refdata import my_log
 
 results_dir = ""
 
-get_roted_for_sts_and_squat = get_roted0
+get_roted_for_sts_and_squat = get_roted1
 
 def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=None):
     my_log.CONTEXT = f"{subject_num} {this_action_name}"

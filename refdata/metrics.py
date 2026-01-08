@@ -30,12 +30,12 @@ trial_walking_config = {
     "walking_towards_vicon":
       {
         "flip_axes":[True, False, False],
-        "swap_xy": False
+        "swap_xy": True
       },
     "walking_away_from_vicon":
       {
         "flip_axes":[False, True, False],
-        "swap_xy": False
+        "swap_xy": True
       },
 }
 
@@ -77,11 +77,11 @@ def get_roted_from_claude_because_im_stupid(df, in_degrees=False, **kwargs):
 
     if initial_yaw_deg > 70: ## assume its 90 and the person is sort of weirdly pointing in the beginning
         flip_x, flip_y, flip_z = trial_walking_config["walking_towards_vicon"]["flip_axes"]
-        swap_axes = trial_walking_config["walking_towards_vicon"]["swap_axes"]
+        swap_xy = trial_walking_config["walking_towards_vicon"]["swap_xy"]
         
     else:
         flip_x, flip_y, flip_z = trial_walking_config["walking_away_from_vicon"]["flip_axes"]
-        swap_axes = trial_walking_config["walking_away_from_vicon"]["swap_axes"]
+        swap_xy = trial_walking_config["walking_away_from_vicon"]["swap_xy"]
 
     df_corrected = df.copy()
     angles = df_corrected[angle_cols].values.copy()

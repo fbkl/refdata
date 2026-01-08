@@ -4,7 +4,7 @@
 import os, sys
 sys.path.append("../refdata")
 from refdata import analyzer
-from refdata.metrics import IMULump, MocapLump, get_roted, get_roted1
+from refdata.metrics import IMULump, MocapLump, get_roted, get_rotedi2
 from importlib import reload
 
 from refdata import my_log

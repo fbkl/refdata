@@ -4,14 +4,14 @@
 import os, sys
 sys.path.append("../refdata")
 from refdata import analyzer
-from refdata.metrics import IMULump, MocapLump, get_roted, get_rotedi2
+from refdata.metrics import IMULump, MocapLump, get_roted, get_roted0
 from importlib import reload
 
 from refdata import my_log
 
 results_dir = ""
 
-get_roted_for_sts_and_squat = get_rotedi2
+get_roted_for_sts_and_squat = get_roted0
 
 from refdata.metrics import change_do_rename
 

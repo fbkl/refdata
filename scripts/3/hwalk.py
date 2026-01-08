@@ -78,7 +78,7 @@ if False:
     action_data = walking2.walking2
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted)
 
-if True:
+if False:
 
     reload(analyzer)
     ######################### TRIAL INFO ##########################################
@@ -96,7 +96,7 @@ if True:
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 
 
-if True:
+if False:
     reload(analyzer)
     ######################### TRIAL INFO ##########################################
 
@@ -113,7 +113,7 @@ if True:
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 
 
-if False:
+if True:
     reload(analyzer)
     ######################### TRIAL INFO ##########################################
 
@@ -129,7 +129,7 @@ if False:
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 
 
-if False:
+if True:
 
     reload(analyzer)
     ######################### TRIAL INFO ##########################################

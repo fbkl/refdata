@@ -35,6 +35,38 @@ def interactive_display(ui_control):
     if interactive:
         display(ui_control)
 
+def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False, angle_cols=['pelvis_tilt', 'pelvis_list', 'pelvis_rotation']):
+    
+    """
+    Removes initial yaw offset from pelvis angles.
+    Assumes XYZ body-fixed (intrinsic) Euler angles in DEGREES.
+    """
+    # Get first frame angles
+    angles_deg = this_df[angle_cols].values  # shape: (n_frames, 3)
+    initial_angles = angles_deg[0, :]
+    
+    # Get the initial yaw offset (Z rotation)
+    initial_yaw = initial_angles[2]
+    
+    # Create rotation to remove this yaw
+    # We want to rotate about Z by -initial_yaw
+    yaw_correction = R.from_euler('z', -initial_yaw, degrees=True)
+    
+    # Convert all frames to rotation objects (body-fixed XYZ = intrinsic 'xyz')
+    rotations = R.from_euler('xyz', angles_deg, degrees=True)
+    
+    # Apply correction: R_corrected = R_yaw_correction * R_original
+    corrected_rotations = yaw_correction * rotations
+    
+    # Convert back to Euler angles
+    corrected_angles = corrected_rotations.as_euler('xyz', degrees=True)
+    
+    # Put back in dataframe
+    df_corrected = this_df.copy()
+    df_corrected[angle_cols] = corrected_angles
+    
+    return df_corrected
+
 
 def get_roted(this_df, in_degrees=False):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]

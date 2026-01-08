@@ -78,7 +78,7 @@ if False:
     action_data = walking2.walking2
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted)
 
-if False:
+if True:
 
     reload(analyzer)
     ######################### TRIAL INFO ##########################################

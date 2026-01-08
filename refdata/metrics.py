@@ -338,7 +338,9 @@ class SyncedTrials:
             "pelvis_list": PB,
             "pelvis_rotation": "pelvis_rotation"
         }
-        
+       
+        inverted_map_i = {v: k for k, v in rename_map_i.items()}
+
         rename_map_m = {
             "pelvis_tilt": PB,
             "pelvis_list": PA,
@@ -472,9 +474,13 @@ class SyncedTrials:
             if valid(self.imu_resampled):
                 logger.info("imu is valid attempting rotation")
                 self.imu_resampled = self.get_roted_fun(self.imu_resampled, is_mocap=False)
+                if do_rename:
+                    self.imu_resampled = self.imu_resampled.rename(columns=inverted_map_i)
             if valid(self.mocap_resampled):
                 logger.info("mocap is valid attempting rotation")
                 self.mocap_resampled = self.get_roted_fun(self.mocap_resampled, is_mocap=True)
+                if do_rename:
+                    self.mocap_resampled = self.mocap_resampled.rename(columns=inverted_map_i)
         else:
             logger.info(f"I am NOT ik and will NOT try to get_roted {repr(self.my_files)}")
 
@@ -1055,7 +1061,7 @@ class Dismissed():
                 results[joint] = {'RMSE': rmse, 'Pearson_r': pearson_r}
             # Make it a nice dataframe
             results_df = pd.DataFrame(results).T
-            results_df.to_csv(f"{self.save_fig_dir}/rmse_pearson.csv")
+            results_df.to_csv(f"{self.save_fig_dir}/rmse_pearson_{gtype}.csv")
             #logging.info("d"*40)
             #print(results_df)
             #logging.info("d"*40)

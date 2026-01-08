@@ -14,9 +14,17 @@ vv = my_log.vlog
 logger.info("Loading metrics")
 
 PA = "pelvis_tilt"
-#PA = "pelvis_tilt_x"
 PB = "pelvis_list"
-#PB = "pelvis_obliquity"
+
+do_rename = False
+
+def change_do_rename():
+    global do_rename
+    global PA
+    global PB
+    do_rename = True
+    PA = "pelvis_tilt_x"
+    PB = "pelvis_obliquity"
 
 from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output, Layout
 import ipywidgets as widgets
@@ -289,8 +297,8 @@ class SyncedTrials:
                         continue
                     imu_data[i] = imu_data[i].rename(columns={col:col+"_moment"})
             
-
-            #imu_data[i] = imu_data[i].rename(columns=rename_map_i)
+            if do_rename:
+                imu_data[i] = imu_data[i].rename(columns=rename_map_i)
             # Get the first timestamp
             t0 = imu_data[i]["time"].iloc[0]  # .iloc[0] not .index[0]
 
@@ -314,7 +322,8 @@ class SyncedTrials:
             # Load Vicon .mot files
             mocap_data[i] = pd.read_csv(this_mocap_file, delimiter='\t', skiprows=mocap_skip_rows)
             
-            #mocap_data[i] = mocap_data[i].rename(columns=rename_map_m)
+            if do_rename:
+                mocap_data[i] = mocap_data[i].rename(columns=rename_map_m)
             
             # i want to save the mocap data begining and end. when i dont have mocap, i dont have a reference. 
             # if i compare to padded values im messing things up

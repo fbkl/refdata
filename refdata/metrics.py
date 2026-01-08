@@ -1012,6 +1012,7 @@ class Dismissed():
         return time_offsets
 
 def header(sub):
+    sub = repr(sub)
     n = 81
     if (n-len(sub))%2 == 1:
         sub+="="

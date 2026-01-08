@@ -63,13 +63,13 @@ def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False,is_mocap=F
     yaw_correction = R.from_euler('z', -initial_yaw, degrees=in_degrees)
     
     # Convert all frames to rotation objects (body-fixed XYZ = intrinsic 'xyz')
-    rotations = R.from_euler('xyz', angles_deg, degrees=in_degrees)
+    rotations = R.from_euler('yxz', angles_deg, degrees=in_degrees)
     
     # Apply correction: R_corrected = R_yaw_correction * R_original
     corrected_rotations = yaw_correction * rotations
     
     # Convert back to Euler angles
-    corrected_angles = corrected_rotations.as_euler('xyz', degrees=in_degrees)
+    corrected_angles = corrected_rotations.as_euler('yxz', degrees=in_degrees)
     
     # Put back in dataframe
     df_corrected = this_df.copy()

@@ -71,6 +71,11 @@ from refdata.my_log import vlog
 def ptupl(t):
     return f"{t[0]}x{t[1]}"
 
+def my_print(s):
+    print("#"*(60+len(s)))
+    print("#"*30+s+"#"*30)
+    print("#"*(60+len(s)))
+
 import pickle
 
 refdata.plt.rcParams['figure.figsize'] = [12, 5]
@@ -139,14 +144,14 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     for mode in ["grf", "ik", "id", "so"]:
         os.makedirs(my_dir+f"/{mode}/")
-        ptupl(mode)
+        my_print(mode)
         for i, (conv_name_i, fig_size) in enumerate(dict_of_conv_names[mode]):
-            ptupl(conv_name_i)
+            my_print(conv_name_i)
             asRefData = [None,None]
             all_XXX_curves_for_this_person = [None, None]
             RR = [None, None]
             for j, stream in enumerate(["imu", "mocap"]):
-                ptupl(stream)
+                my_print(stream)
                 reference_caption = f"{stream.capitalize()} {subject_num}"
                 if mode== "so"  and stream == "mocap":
                     reference_caption = f"EMG {subject_num}"
@@ -161,9 +166,9 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                 curves_dictionary[mode+"_"+stream+"_"+str(i)] = all_XXX_curves_for_this_person[j]
                 asRefData[j] = refdata.RefData(this_action_name)
                 for std_or_not, std_str in [(False, "all"), (True, "std")]:
-                    ptupl(std_str)
+                    my_print(std_str)
                     RR[j] = refdata.plot_std_plots(all_XXX_curves_for_this_person[j], plot_std=std_or_not, ref=asRefData[j], subject_identifier=reference_caption, subplot_grid = fig_size,)
-                    plt.savefig(my_dir+f'/{mode}/sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
+                    plt.savefig(my_dir+f'/{mode}/sub{subject_num}_{mode}_{stream}_{this_action_name}{my_print(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
                     refdata.plt.close()
                     
                 ## i dont think it makes a difference if it is std or all for the gencurves thing
@@ -172,12 +177,12 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                 curves_dictionary[mode+"_"+stream+"_"+str(i)+"_ref"] = asRefData[j]
                 pickle.dump(all_XXX_curves_for_this_person[j],open(my_dir+f"/{mode}/{mode}{this_action_name}{subject_num}_{stream}{i}.p","wb"))
 
-            ptupl("Imu + Mocap")
+            my_print("Imu + Mocap")
 
             ## maybe i need to check something 
             _ = refdata.plot_std_plots(all_XXX_curves_for_this_person[0], plot_std=False, ref=asRefData[1], subplot_grid = fig_size,)
 
-            ptupl("Saving IMU + Mocap")
+            my_print("Saving IMU + Mocap")
             plt.savefig(my_dir+f'{mode}/sub{subject_num}_{mode}_{this_action_name}_imu_mocap_ref_{ptupl(fig_size)}_all{i}.pdf', bbox_inches = 'tight')
             refdata.plt.close()
 
@@ -218,7 +223,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     #fig, ax, nl, legend, cref_dic = refdata.plotAX(axcurve_list, axs, fig)
     fig, ax, nl, legend, cref_dic, Z = refdata.plotAX(axcurve_list, axs, fig, plot_ref_curves=True)
 
-    ptupl("8x3")
+    my_print("8x3")
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}8x3_tighter_stds.pdf', bbox_inches = 'tight')
     refdata.plt.close()
@@ -283,7 +288,7 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_stds.pdf', bbox_inches = 'tight')
 
-    ptupl("paper_version")
+    my_print("paper_version")
     # ## This is the sagital plane with calf muscles with all. maybe goes in appendix paper
 
     # In[ ]:
@@ -303,6 +308,6 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     plt.savefig(my_dir+f'sub{subject_num}_ik_id_so_{this_action_name}4x3_tighter_all.pdf', bbox_inches = 'tight')
 
-    ptupl("all curves, sort of unformatted")
+    my_print("all curves, sort of unformatted")
     plt.close('all')
     return results_dir

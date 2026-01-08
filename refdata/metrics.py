@@ -257,7 +257,7 @@ def valid(maybe_df):
 
 from contextlib import nullcontext
 
-def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes=["_tx","_ty","_tz"]):
+def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes=["_tx","_ty","_tz","time"]):
     """
     Convert angular columns in dataframe between degrees and radians.
     

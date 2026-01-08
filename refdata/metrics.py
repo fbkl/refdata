@@ -41,7 +41,7 @@ def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False,is_mocap=F
     
     """
     Removes initial yaw offset from pelvis angles.
-    Assumes XYZ body-fixed (intrinsic) Euler angles in DEGREES.
+    Assumes XYZ body-fixed (intrinsic) Euler angles.
     """
     # Get first frame angles
     angles_deg = this_df[angle_cols].values  # shape: (n_frames, 3)
@@ -257,7 +257,7 @@ def valid(maybe_df):
 
 from contextlib import nullcontext
 
-def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes=["_tx","_ty","_tz",""]):
+def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes=["_tx","_ty","_tz","time"]):
     """
     Convert angular columns in dataframe between degrees and radians.
     
@@ -288,7 +288,8 @@ def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes
         if not pd.api.types.is_numeric_dtype(corrected_df[col]):
             continue
         cols_to_convert.append(col)
-    
+   
+    logger.info(f"columns to convert: {cols_to_convert}")
     # Convert
     if in_degrees:
         # degrees -> radians
@@ -355,9 +356,13 @@ class SyncedTrials:
                 continue
             imu_skip_rows, imu_in_degrees, _ = parse_header(this_imu_file)
             # Load IMU .sto files (OpenSim format)
+            logger.info(f"imu in degrees {imu_in_degrees}")
+
+
             imu_data[i] = convert_dataframe_to_radians(pd.read_csv(this_imu_file, delimiter='\t', skiprows=imu_skip_rows), imu_in_degrees) 
 
-            
+            logger.info(f"imu:\n{imu_data[i]}")
+
             if "tau" in this_imu_file: ## i assume is id
                 self.curve_suffix = "_moment"
                 for col in imu_data[i].columns:
@@ -386,10 +391,13 @@ class SyncedTrials:
             if not this_mocap_file:
                 continue
             mocap_skip_rows, mocap_in_degrees, _ = parse_header(this_mocap_file)
+            logger.info(f"mocap in degrees {mocap_in_degrees}")
 
             # Load Vicon .mot files
             mocap_data[i] = convert_dataframe_to_radians(pd.read_csv(this_mocap_file, delimiter='\t', skiprows=mocap_skip_rows), mocap_in_degrees)
             
+            logger.info(f"mocap:\n{mocap_data[i]}")
+
             if do_rename:
                 mocap_data[i] = mocap_data[i].rename(columns=rename_map_m)
             
@@ -1073,9 +1081,9 @@ def header(sub):
     if (n-len(sub))%2 == 1:
         sub+="="
     a = (n - len(sub))//2 
-    print("="*n)
+    #print("="*n)
     print("="*a + sub +"="*a)
-    print("="*n)
+    #print("="*n)
 
 
 class Lump():

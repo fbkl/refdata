@@ -4,12 +4,14 @@
 import os, sys
 sys.path.append("../refdata")
 from refdata import analyzer
-from refdata.metrics import IMULump, MocapLump, get_roted
+from refdata.metrics import IMULump, MocapLump, get_roted, get_roted0
 from importlib import reload
 
 from refdata import my_log
 
 results_dir = ""
+
+get_roted_for_sts_and_squat = get_roted0
 
 def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=None):
     my_log.CONTEXT = f"{subject_num} {this_action_name}"
@@ -86,7 +88,7 @@ if False:
     import squat1
 
     action_data = squat1.squat1
-    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=None)
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 
 
 if True:
@@ -103,7 +105,7 @@ if True:
     import squat2
 
     action_data = squat2.squat2
-    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=None)
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 
 
 if False:
@@ -119,7 +121,7 @@ if False:
     ###############################################################################
     import sts1
     action_data = sts1.sts1
-    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=None)
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 
 
 if False:
@@ -136,5 +138,5 @@ if False:
     ###############################################################################
     import sts2
     action_data = sts2.sts2
-    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=None)
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 

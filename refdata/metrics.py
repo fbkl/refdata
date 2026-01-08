@@ -35,7 +35,7 @@ def interactive_display(ui_control):
     if interactive:
         display(ui_control)
 
-def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False):
+def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False,is_mocap=False, **kwargs):
     
     angle_cols=[PA, PB, 'pelvis_rotation']
     
@@ -52,16 +52,16 @@ def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False):
     
     # Create rotation to remove this yaw
     # We want to rotate about Z by -initial_yaw
-    yaw_correction = R.from_euler('z', -initial_yaw, degrees=True)
+    yaw_correction = R.from_euler('z', -initial_yaw, degrees=in_degrees)
     
     # Convert all frames to rotation objects (body-fixed XYZ = intrinsic 'xyz')
-    rotations = R.from_euler('xyz', angles_deg, degrees=True)
+    rotations = R.from_euler('xyz', angles_deg, degrees=in_degrees)
     
     # Apply correction: R_corrected = R_yaw_correction * R_original
     corrected_rotations = yaw_correction * rotations
     
     # Convert back to Euler angles
-    corrected_angles = corrected_rotations.as_euler('xyz', degrees=True)
+    corrected_angles = corrected_rotations.as_euler('xyz', degrees=in_degrees)
     
     # Put back in dataframe
     df_corrected = this_df.copy()
@@ -70,7 +70,7 @@ def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False):
     return df_corrected
 
 
-def get_roted(this_df, in_degrees=False):
+def get_roted(this_df, in_degrees=False, **kwargs):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]
     
     # Global Y-axis correction
@@ -101,7 +101,7 @@ def get_roted(this_df, in_degrees=False):
     return this_df
 
 
-def get_rotedi2(this_df, in_degrees=False):
+def get_rotedi2(this_df, in_degrees=False, **kwargs):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]
     
     # Determine if we need +90 or -90 correction
@@ -135,7 +135,7 @@ def get_rotedi2(this_df, in_degrees=False):
 
 
 
-def get_roted1(this_df, in_degrees=False):
+def get_roted1(this_df, in_degrees=False, **kwargs):
     initial_rotation = this_df['pelvis_rotation'].iloc[0]
    
     if np.abs(initial_rotation) < 10*np.pi/180: ## smaller than pm 10 degrees we do nothing
@@ -167,7 +167,7 @@ def get_roted1(this_df, in_degrees=False):
     return this_df
 
 
-def get_roted0(this_df,in_degrees=False):
+def get_roted0(this_df,in_degrees=False, **kwargs):
     return this_df
 
     logger.info("="*80)
@@ -231,10 +231,9 @@ def get_roted0(this_df,in_degrees=False):
 def parse_header(this_file):
     print(f"=== {this_file} FILE ===")
     skip_rows = 0
-    scale = 1
+    in_degrees=False
     is_ik = False
     if "tau" in this_file:
-        scale = 1
         is_ik = False
     if "ik.sto" in this_file:
         is_ik = True
@@ -245,11 +244,10 @@ def parse_header(this_file):
             if "endheader" in this_line:
                 skip_rows = i+1
             if "inDegrees=yes" in this_line:
-                scale = np.pi/180
+                in_degrees=True
             if "time" in this_line and "moment" in this_line:
-                scale = 1
                 is_ik = False
-    return skip_rows, scale, is_ik
+    return skip_rows, in_degrees, is_ik
 
 def valid(maybe_df):
     if type(maybe_df) == type(pd.DataFrame()):
@@ -258,6 +256,48 @@ def valid(maybe_df):
         return False
 
 from contextlib import nullcontext
+
+def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes=["_tx","_ty","_tz"]):
+    """
+    Convert angular columns in dataframe between degrees and radians.
+    
+    Parameters:
+    -----------
+    this_df : pd.DataFrame
+        Input dataframe
+    in_degrees : bool
+        If True, converts FROM degrees TO radians
+        If False, converts FROM radians TO degrees
+    skip_columns_with_suffixes : list
+        Column suffixes to skip (e.g., translations)
+    
+    Returns:
+    --------
+    corrected_df : pd.DataFrame
+        Dataframe with converted angles
+    """
+    corrected_df = this_df.copy()
+    
+    # Find columns to convert (exclude those with skip suffixes)
+    cols_to_convert = []
+    for col in corrected_df.columns:
+        # Skip if column ends with any of the skip suffixes
+        if any(col.endswith(suffix) for suffix in skip_columns_with_suffixes):
+            continue
+        # Skip non-numeric columns
+        if not pd.api.types.is_numeric_dtype(corrected_df[col]):
+            continue
+        cols_to_convert.append(col)
+    
+    # Convert
+    if in_degrees:
+        # degrees -> radians
+        corrected_df[cols_to_convert] = np.deg2rad(corrected_df[cols_to_convert])
+    else:
+        # radians -> degrees
+        corrected_df[cols_to_convert] = np.rad2deg(corrected_df[cols_to_convert])
+    
+    return corrected_df
 
 
 class SyncedTrials:
@@ -291,11 +331,6 @@ class SyncedTrials:
         if type(mocap_files) == type(""):
             mocap_files = [mocap_files]
 
-
-        self.scale_mocap = np.pi/180
-
-        self.scale_imu = np.pi/180
-       
         # the mocap pelvis has a different frame, we need to rename them :
         ## this isnt working but whatever
         rename_map_i = {
@@ -321,9 +356,11 @@ class SyncedTrials:
         for i, this_imu_file in enumerate(imu_files):
             if not this_imu_file:
                 continue
-            imu_skip_rows, self.scale_imu, _ = parse_header(this_imu_file)
+            imu_skip_rows, imu_in_degrees, _ = parse_header(this_imu_file)
             # Load IMU .sto files (OpenSim format)
-            imu_data[i] = pd.read_csv(this_imu_file, delimiter='\t', skiprows=imu_skip_rows)  
+            imu_data[i] = convert_dataframe_to_radians(pd.read_csv(this_imu_file, delimiter='\t', skiprows=imu_skip_rows), imu_in_degrees) 
+
+            
             if "tau" in this_imu_file: ## i assume is id
                 self.curve_suffix = "_moment"
                 for col in imu_data[i].columns:
@@ -351,10 +388,10 @@ class SyncedTrials:
         for i, this_mocap_file in enumerate(mocap_files):
             if not this_mocap_file:
                 continue
-            mocap_skip_rows, self.scale_mocap, _ = parse_header(this_mocap_file)
+            mocap_skip_rows, mocap_in_degrees, _ = parse_header(this_mocap_file)
 
             # Load Vicon .mot files
-            mocap_data[i] = pd.read_csv(this_mocap_file, delimiter='\t', skiprows=mocap_skip_rows)
+            mocap_data[i] = convert_dataframe_to_radians(pd.read_csv(this_mocap_file, delimiter='\t', skiprows=mocap_skip_rows), mocap_in_degrees)
             
             if do_rename:
                 mocap_data[i] = mocap_data[i].rename(columns=rename_map_m)
@@ -368,13 +405,6 @@ class SyncedTrials:
 
             # mocap is already at wall time
             mocap_data[i] = mocap_data[i].set_index('time')
-            
-            if self.scale_mocap < 0.9 or self.scale_mocap > 1.1: ## this will mess up the translations
-                logger.info("regularizing mocap data")
-                mocap_data[i] *= self.scale_mocap
-                self.scale_mocap = 1 
-            else:
-                logger.info("mocap data didnt need fixing???")
 
             t_starts.append(mocap_data[i].index[0])
             t_ends.append(mocap_data[i].index[-1])
@@ -434,10 +464,10 @@ class SyncedTrials:
             logger.info(f"I am ik and will try to get_roted {repr(self.my_files)}")
             if valid(self.imu_resampled):
                 logger.info("imu is valid attempting rotation")
-                self.imu_resampled = self.get_roted_fun(self.imu_resampled)
+                self.imu_resampled = self.get_roted_fun(self.imu_resampled, is_mocap=False)
             if valid(self.mocap_resampled):
                 logger.info("mocap is valid attempting rotation")
-                self.mocap_resampled = self.get_roted_fun(self.mocap_resampled)
+                self.mocap_resampled = self.get_roted_fun(self.mocap_resampled, is_mocap=True)
         else:
             logger.info(f"I am NOT ik and will NOT try to get_roted {repr(self.my_files)}")
 
@@ -450,8 +480,8 @@ class SyncedTrials:
             total_xcorr = 0
             time_threshold = 0.1 # seconds
             for joint in self.common_joints:
-                imu_signal = self.imu_resampled[joint]*self.scale_imu
-                mocap_signal = self.mocap_resampled[joint]*self.scale_mocap
+                imu_signal = self.imu_resampled[joint]
+                mocap_signal = self.mocap_resampled[joint]
 
                 imu_sliced = imu_signal.loc[(self.mask_mocap[0]-time_threshold):(self.mask_mocap[1]+time_threshold)]
                 mocap_sliced = mocap_signal.loc[(self.mask_mocap[0]-time_threshold):(self.mask_mocap[1]+time_threshold)]
@@ -643,10 +673,10 @@ class SyncedTrials:
             ax.clear()
             #logger.warning("what should i plot here, idk...")
             if valid(self.imu_resampled):
-                imu_signal = self.imu_resampled[joint]*self.scale_imu
+                imu_signal = self.imu_resampled[joint]
                 ax.plot(self.imu_resampled.index, imu_signal, label="imu")
             if valid(self.mocap_resampled):
-                mocap_signal = self.mocap_resampled[joint]*self.scale_mocap
+                mocap_signal = self.mocap_resampled[joint]
                 ax.plot(self.mocap_resampled.index, mocap_signal, label="mocap")
             ax.legend()
             ax.axvline(self.mask_mocap[0], color="g")
@@ -965,12 +995,7 @@ class Dismissed():
             imu_all = {}
             #mocap_all = pd.DataFrame()
             mocap_all = {}
-            scale_imu=1
-            scale_mocap=1
             for sTiii in sTrials:
-                ##this is bad, but if i am mixing scales it is also bad
-                scale_imu = sTiii.scale_imu
-                scale_mocap = sTiii.scale_mocap
                 for joint in included_joints:
                     if not joint in imu_all:
                         imu_all[joint] = []
@@ -1006,8 +1031,8 @@ class Dismissed():
                         break
                 if is_skip:
                     continue
-                imu_signal = np.array(imu_all[joint]) * scale_imu  # to degrees if needed
-                mocap_signal = np.array(mocap_all[joint]) * scale_mocap  # to degrees if needed
+                imu_signal = np.array(imu_all[joint]) 
+                mocap_signal = np.array(mocap_all[joint]) 
                 with metrics_output:
                     ax[jjjjj].clear()
                     ax[jjjjj].plot(imu_signal,label="imu"+joint)

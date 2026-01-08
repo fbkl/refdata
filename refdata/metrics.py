@@ -305,8 +305,8 @@ class SyncedTrials:
         }
         
         rename_map_m = {
-            "pelvis_tilt": PA,
-            "pelvis_list": PB,
+            "pelvis_tilt": PB,
+            "pelvis_list": PA,
             "pelvis_rotation": "pelvis_rotation"
         }
 

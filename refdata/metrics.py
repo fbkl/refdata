@@ -37,6 +37,14 @@ def interactive_display(ui_control):
 
 def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False,is_mocap=False, **kwargs):
     
+    ## this is still wrong. there is a pelvis tilt flip thing going on which also affects the pelvis obliquity, idk where it comes from, it is probably some geometry thing that i am too tired to figure out. i might need to make this function a random reassignment matrix thing like 
+    #[[ 0  0  1 ]
+    # [-1  0  0 ]
+    # [ 0  1  0 ]]
+
+    # that works per trial. i dont see another way to solve this before the deadline
+
+
     angle_cols=[PA, PB, 'pelvis_rotation']
     
     """

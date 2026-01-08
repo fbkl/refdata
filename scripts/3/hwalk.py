@@ -11,6 +11,7 @@ from refdata import my_log
 
 results_dir = ""
 
+get_roted_for_walking = get_roted_from_claude_because_im_stupid
 get_roted_for_sts_and_squat = get_roted_from_claude_because_im_stupid
 
 from refdata.metrics import change_do_rename
@@ -46,7 +47,7 @@ def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, 
         analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = results_dir, ext_sync= myExtSync, get_roted_fun=get_roted_fun)
     return results_dir
 
-if False:
+if True:
     ######################### TRIAL INFO ##########################################
 
     this_action_name = "walking"
@@ -59,10 +60,10 @@ if False:
     import walking1
 
     action_data = walking1.walking1
-    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted)
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
 
 
-if False:
+if True:
     reload(analyzer)
     ######################### TRIAL INFO ##########################################
 
@@ -76,7 +77,7 @@ if False:
     import walking2
 
     action_data = walking2.walking2
-    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted)
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
 
 if False:
 
@@ -113,7 +114,7 @@ if False:
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 
 
-if True:
+if False:
     reload(analyzer)
     ######################### TRIAL INFO ##########################################
 
@@ -129,7 +130,7 @@ if True:
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_sts_and_squat)
 
 
-if True:
+if False:
 
     reload(analyzer)
     ######################### TRIAL INFO ##########################################

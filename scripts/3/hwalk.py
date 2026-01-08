@@ -11,7 +11,7 @@ from refdata import my_log
 
 results_dir = ""
 
-get_roted_for_sts_and_squat = get_roted0
+get_roted_for_sts_and_squat = get_roted
 
 from refdata.metrics import change_do_rename
 

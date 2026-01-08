@@ -67,6 +67,8 @@ def get_roted_from_claude_because_im_stupid(this_df, in_degrees=False,is_mocap=F
     df_corrected = this_df.copy()
     df_corrected[angle_cols] = corrected_angles
     
+    if is_mocap: ## I cant fix this correctly with adequate math and i am growing desperate. sorry.
+        df_corrected[PA] *= -1
     return df_corrected
 
 

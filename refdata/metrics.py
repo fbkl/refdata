@@ -26,6 +26,21 @@ def change_do_rename():
     PA = "pelvis_tilt_x"
     PB = "pelvis_obliquity"
 
+trial_walking_config = {
+    "walking_towards_vicon":
+      {
+        "flip_axes":[True, False, False],
+        "swap_xy": False
+      },
+    "walking_away_from_vicon":
+      {
+        "flip_axes":[False, True, False],
+        "swap_xy": False
+      },
+}
+
+
+
 from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output, Layout
 import ipywidgets as widgets
 
@@ -37,45 +52,56 @@ def interactive_display(ui_control):
 
 def get_roted_from_claude_because_im_stupid(df, in_degrees=False, **kwargs):
     """
-    Removes initial yaw by finding what Z rotation would align
-    the initial pelvis forward direction with the global X-axis.
+    Applies axis flips, swaps, and removes initial yaw offset.
+    
+    Parameters:
+    -----------
+    flip_axes : tuple of 3 bools
+        (flip_x, flip_y, flip_z) - if True, negates that axis angle
+    swap_xy : bool
+        If True, swaps tilt and list axes
     """
     angle_cols = [PA, PB, 'pelvis_rotation']
     
-    angles = df[angle_cols].values.copy()
     
-    # Convert to radians if needed
-    if in_degrees:
-        angles = np.deg2rad(angles)
+    angles_deg = df[angle_cols].values  # shape: (n_frames, 3)
+    initial_angles = angles_deg[0, :]
     
-    # Get initial rotation
-    R_initial = R.from_euler('xyz', angles[0], degrees=False)
-    
-    # Get the forward direction vector (pelvis X-axis in global frame)
-    # This is the first column of the rotation matrix
-    forward_vector = R_initial.as_matrix()[:, 0]
-    
-    # Project onto horizontal plane (ignore vertical component)
-    forward_xy = forward_vector[:2]  # [x, y]
-    
-    # Find angle this makes with global X-axis
-    global_yaw = np.arctan2(forward_xy[1], forward_xy[0])
-    
-    # Create correction: rotate about global Z to align forward with X-axis
-    R_correction = R.from_rotvec([0, 0, -global_yaw])
-    
-    # Apply to all frames
-    R_all = R.from_euler('xyz', angles, degrees=False)
-    R_corrected = R_correction * R_all
-    
-    # Convert back
-    corrected_angles = R_corrected.as_euler('xyz', degrees=False)
-    
-    if in_degrees:
-        corrected_angles = np.rad2deg(corrected_angles)
-    
+    # Get the initial yaw offset (Z rotation)
+    initial_yaw = initial_angles[2]
+
+    if not in_degrees:
+        initial_yaw_deg = np.rad2deg(initial_yaw)
+    else:
+        initial_yaw_deg = initial_yaw
+
+    if initial_yaw_deg > 70: ## assume its 90 and the person is sort of weirdly pointing in the beginning
+        flip_x, flip_y, flip_z = trial_walking_config["walking_towards_vicon"]["flip_axes"]
+        swap_axes = trial_walking_config["walking_towards_vicon"]["swap_axes"]
+        
+    else:
+        flip_x, flip_y, flip_z = trial_walking_config["walking_away_from_vicon"]["flip_axes"]
+        swap_axes = trial_walking_config["walking_away_from_vicon"]["swap_axes"]
+
     df_corrected = df.copy()
-    df_corrected[angle_cols] = corrected_angles
+    angles = df_corrected[angle_cols].values.copy()
+    
+    # Swap X and Y if needed
+    if swap_xy:
+        angles[:, [0, 1]] = angles[:, [1, 0]]
+    
+    # Apply flips
+    if flip_x:
+        angles[:, 0] = -angles[:, 0]
+    if flip_y:
+        angles[:, 1] = -angles[:, 1]
+    if flip_z:
+        angles[:, 2] = -angles[:, 2]
+    
+    # Remove initial yaw offset (Z rotation)
+    angles[:, 2] = angles[:, 2] - initial_yaw
+    
+    df_corrected[angle_cols] = angles
     
     return df_corrected
 

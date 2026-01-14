@@ -31,7 +31,7 @@ def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, 
         this_lump = IMULump( gX["ik"], "", "", "", "")
         myImuLumpList.append(this_lump)
         gX = g["mocap"]
-        aMocapLump = MocapLump( gX["ik"], "", "", "", "") ## we cant parse the grf fromt the platform yet, if i have to do that i will cry. 
+        aMocapLump = MocapLump( gX["ik"], "", "", "", "")  
         myMocapLumpList.append(aMocapLump)
 
     print(myMocapLumpList[0])
@@ -43,19 +43,78 @@ def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, 
         analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = results_dir, get_roted_fun=get_roted_fun)
     return results_dir
 
+
+this_action_name = "walking"
+
 if True:
     ######################### TRIAL INFO ##########################################
 
-    this_action_name = "walking"
-
-    subject_num="EX01RE"
-    subject_vicon_num = "EXS1"
+    subject_num="01"
+    subject_vicon_num = "S1"
     weight= 99
 
     ###############################################################################
-    import walking1
+    from walking1 import walking as action_data
 
-    action_data = walking1.walking1
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
+
+if True:
+    ######################### TRIAL INFO ##########################################
+
+    subject_num="02"
+    subject_vicon_num = "S2"
+    weight= 99
+
+    ###############################################################################
+    from walking2 import walking as action_data
+
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
+
+if True:
+    ######################### TRIAL INFO ##########################################
+
+    subject_num="03"
+    subject_vicon_num = "S3"
+    weight= 99
+
+    ###############################################################################
+    from walking3 import walking as action_data
+
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
+if True:
+    ######################### TRIAL INFO ##########################################
+
+    subject_num="04"
+    subject_vicon_num = "S4"
+    weight= 99
+
+    ###############################################################################
+    from walking4 import walking as action_data
+
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
+if True:
+    ######################### TRIAL INFO ##########################################
+
+    subject_num="07"
+    subject_vicon_num = "S5"
+    weight= 99
+
+    ###############################################################################
+    from walking5 import walking as action_data
+
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
+
+if True:
+    ######################### TRIAL INFO ##########################################
+
+    subject_num="08"
+    subject_vicon_num = "S6"
+    weight= 99
+
+    ###############################################################################
+    from walking6 import walking as action_data
+
+    results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
+
 
 

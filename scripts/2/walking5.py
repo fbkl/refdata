@@ -1,4 +1,4 @@
-walking1 = [
+walking = [
         {
             "mocap":{
                 "ik":"IKfromMOCAP/S5/ik_newwalking5.mot",

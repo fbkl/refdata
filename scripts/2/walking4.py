@@ -1,5 +1,5 @@
 ## we made a mistake during calibration with this one.
-walking1 = [
+walking = [
         {
             "mocap":{
                 "ik":"IKfromMOCAP/S4/ik_newwalking5.mot",

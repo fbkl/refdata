@@ -338,7 +338,16 @@ def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes
 
 
 class SyncedTrials:
+    def __new__(cls, imu_files, mocap_files, **kwargs):
+        if len(imu_files) == 0 and len(mocap_files)== 0 :
+            return None
+        else:
+            instance = super().__new__(cls)
+            return instance
+
+
     def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False, save_fig_dir="./", mode="unknown_mode", index=-1 , get_roted_fun=None):
+        
         self.get_roted_fun = get_roted_fun
         self.mode = mode
         self.index = index
@@ -907,7 +916,8 @@ class Dismissed():
             if sync_Li[0] or sync_Li[1]:
                 logger.warning("Using external segmentation for actions!!!")
                 #logging.error(this_SL.save_fig_dir)
-                this_SL.manual_split(sync_Li[0], sync_Li[1])
+                if this_SL:
+                    this_SL.manual_split(sync_Li[0], sync_Li[1])
             self.slumpList.append(this_SL)
 
     ## I think i did the same thing twice
@@ -949,6 +959,8 @@ class Dismissed():
         for stli, stri in zip(stll, stlr):
             #logger.info(stli.my_files)
             #logger.info(stri.my_files)
+            if not stli and not stri:
+                continue
             this_file_name= ["",""]
             if iomtype == "imu":
                 stlis = stli.imu_resampled
@@ -990,6 +1002,8 @@ class Dismissed():
 
         time_offsets = []
         sTrials = self.get_strials(gtype)
+        if not sTrials:
+            return
         if lag:
             time_offsets = lag 
         
@@ -999,8 +1013,10 @@ class Dismissed():
         if len(sTrials) == 0:
             logger.fatal("You have no Trials to run_analysis on!!!!!!")
             return
-        for sTiii in sTrials:
 
+        for sTiii in sTrials:
+            if not sTiii:
+                continue
             if not common_joints:
                 common_joints = sTiii.common_joints
             if not lag:
@@ -1028,6 +1044,11 @@ class Dismissed():
             if is_skip:
                 continue
             included_joints.append(joint)
+        
+        if len(included_joints) == 0:
+            logger.error("NO JOINTS? doing nothing")
+            return
+
         cols = 2
         rows = int(np.ceil(len(included_joints)/cols)) 
         print("o.O"*100)
@@ -1174,10 +1195,11 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
         self.action = action
         self.lag = self.ik.time_offset
         self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfl", index=index, get_roted_fun=self.get_roted_fun)
+        
         self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfr", index=index, get_roted_fun=self.get_roted_fun)
         self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="id"  , index=index, get_roted_fun=self.get_roted_fun)
         self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="so"  , index=index, get_roted_fun=self.get_roted_fun)
-        if self.action in ["walking", "gait", "running"]:
+        if self.action in ["walking", "gait", "running"] and self.grfl and self.grfr:
             
             self.grf_split_me()
             self.update_from_splits()
@@ -1202,14 +1224,16 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
     def update_from_splits(self):
 
         for sti  in [self.ik, self.grfl, self.grfr, self.id, self.so]:
-            sti.step_seg_l_list = self.step_seg_l_list
-            sti.step_seg_r_list = self.step_seg_r_list
+            if sti:
+                sti.step_seg_l_list = self.step_seg_l_list
+                sti.step_seg_r_list = self.step_seg_r_list
 
         self.ik.create_controls() # the plot is inside a control now, so we need this.
         #self.ik.create_plot()
         self.ik.rebork()
         for sti  in [self.grfl, self.grfr, self.id, self.so]:
-            sti.mask_from(self.ik)
+            if sti:
+                sti.mask_from(self.ik)
         self.segmented = True
     def grf_split_me(self):
         zero_time = 0
@@ -1218,8 +1242,9 @@ class SyncedLump(): ## dont get distracted. a lump is a trial
 
     def rebork_all(self):
         for sti  in [self.grfl, self.grfr, self.id, self.so]:
-            sti.create_controls() # the plot is inside a control now, so we need this.
-            #sti.create_plot()
-            sti.rebork()
+            if sti:
+                sti.create_controls() # the plot is inside a control now, so we need this.
+                #sti.create_plot()
+                sti.rebork()
 
 

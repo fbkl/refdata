@@ -540,7 +540,7 @@ def generate_action_plots(action_trials, xy_clippings_both, skip_trials,include_
                     this_action_name= action
                 else:
                     this_action_name = matching_actions[0]
-            this_trial = TrialData(file, remove_time_offset=use_absolute_times)
+            this_trial = TrialData(file, remove_time_offset=not use_absolute_times)
 
             data = this_trial.data
             data_time = data["time"]
@@ -965,6 +965,7 @@ class TrialData:
                 header_line_count+=1
 
         self.data = pd.read_csv (file, sep = sepsep, skiprows=header_line_count)
+        print(self.data["time"][0])
         if remove_time_offset: #remove time ofset
             self.data["time"] = self.data["time"] - self.data["time"][0]
         for col in self.data.columns:
@@ -995,14 +996,14 @@ class TrialData:
         else: 
             return self.data.loc[:,cols].values
         
-def generate_somejoint_or_muscle_curves(some_action_trials, skip_trials, **kwargs):
+def generate_somejoint_or_muscle_curves(some_action_trials, skip_trials, use_absolute_times=False, **kwargs):
     xy_joint_or_muscles = ({},{})
     for i_file, file in enumerate(some_action_trials):
         if i_file in skip_trials:
             logger.warning("skipping file: %s"%file)
             continue
 
-        this_trial = TrialData(file, remove_time_offset=use_absolute_times)
+        this_trial = TrialData(file, remove_time_offset=not use_absolute_times)
         #this_trial.trim_time(time_start[i_file], time_end[i_file] )
 
         data = this_trial.data

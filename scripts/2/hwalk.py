@@ -23,6 +23,7 @@ def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, 
 
     myImuLumpList = []
     myMocapLumpList = []
+    myExtSync = []
 
     global results_dir
 
@@ -34,17 +35,21 @@ def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, 
         aMocapLump = MocapLump( gX["ik"], "", "", "", "")  
         myMocapLumpList.append(aMocapLump)
 
+        myExtSync.append(g["ext_sync"])
+        
     print(myMocapLumpList[0])
     print(myImuLumpList[0])
 
     if not results_dir:
-        results_dir = analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, get_roted_fun= get_roted_fun )
+        results_dir = analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, ext_sync = myExtSync, get_roted_fun= get_roted_fun )
     else:
-        analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = results_dir, get_roted_fun=get_roted_fun)
+        analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = results_dir, ext_sync = myExtSync, get_roted_fun=get_roted_fun)
     return results_dir
 
 
 this_action_name = "walking"
+
+## segmentation is based on grf and i dont have grf, so it has to be manual!
 
 if True:
     ######################### TRIAL INFO ##########################################

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import os, sys
+import sys
 sys.path.append("../refdata")
 from refdata import analyzer
 from refdata.metrics import IMULump, MocapLump, get_roted, get_roted_from_claude_because_im_stupid

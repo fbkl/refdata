@@ -2,7 +2,7 @@ sts1 = [
 {
 	"mocap":{
 		"so_older":"RTValidation_Extra/processedEMG/EXS1/sts1_processed.sto",
-		"so":"RTValidation_Extra/EXS1/sts1_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/sts1_processed.sto",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_sts1.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/sts1.mot",
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_sts1.mot",
@@ -25,7 +25,7 @@ sts1 = [
 {
 	"mocap":{
 		"so_older":"RTValidation_Extra/processedEMG/EXS1/sts2_processed.sto",
-		"so":"RTValidation_Extra/EXS1/sts2_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/sts2_processed.sto",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_sts2.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/sts2.mot",
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_sts2.mot",

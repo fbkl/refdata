@@ -1,9 +1,9 @@
 squat1= [
 {
 	"mocap":{
-		"so":"RTValidation_Extra/processedEMG/EXS1/squat1_processed.sto",
+		"so_older":"RTValidation_Extra/processedEMG/EXS1/squat1_processed.sto",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_squat1.sto",
-		"so":"RTValidation_Extra/EXS1/squat1_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/squat1_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/squat1.mot",
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_squat1.mot",
 	},
@@ -24,9 +24,9 @@ squat1= [
 {
 	"mocap":{
 
-		"so":"RTValidation_Extra/processedEMG/EXS1/squat2_processed.sto",
+		"so_older":"RTValidation_Extra/processedEMG/EXS1/squat2_processed.sto",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_squat2.sto",
-		"so":"RTValidation_Extra/EXS1/squat2_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/squat2_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/squat2.mot",
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_squat2.mot",
 	},

@@ -748,12 +748,19 @@ class SyncedTrials:
         valid_r = []
         suffix_length = len("_l"+self.curve_suffix )
 
-        if self.mocap_times and False:
+       
+        logging.info(f"stepseg l before segmentation : {self.step_seg_l_list}")
+        logging.info(f"stepseg r before segmentation : {self.step_seg_r_list}")
+        if self.mocap_times:
+            logging.info(f"i have mocap_times defed, i will try to add time offset of {self.time_offset}")
             for step_seg_list in [self.step_seg_l_list, self.step_seg_r_list]:
                 for n_ties in step_seg_list:
                 ## update the values with 
-                    n_ties[0] += self.time_offset 
-                    n_ties[1] += self.time_offset 
+                    n_ties[0] += self.time_offset/2.0 ### this doesnt make a lot of sense, idk why the offsets seem to be bigger than they really are 
+                    n_ties[1] += self.time_offset/2.0 
+        
+        logging.info(f"stepseg l after segmentation : {self.step_seg_l_list}")
+        logging.info(f"stepseg r after segmentation : {self.step_seg_r_list}")
 
         for lefties in self.step_seg_l_list[:-1]:
             style = ":" if lefties[0] < self.mask_mocap[0] or lefties[1] > self.mask_mocap[1] else "-"
@@ -1103,7 +1110,7 @@ class Dismissed():
                 assert(len(imu_all[joint])==len(mocap_all[joint]))
 
             for some_modality_dic, some_modality in zip([imu_all, mocap_all],["imu","mocap"]):
-                sA = pd.DataFrame(some_modality_dic)
+                sA = pd.DataFrame.from_dict(some_modality_dic, orient="index") ## if there are some ragged edges it will fill with NaNs, i think,,, we cross this bridge when we break some eggs
                 sA.to_csv(f"{self.save_fig_dir}/{some_modality}_{gtype}.csv", index=False )
 
 

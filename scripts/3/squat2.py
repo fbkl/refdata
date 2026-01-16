@@ -3,7 +3,7 @@ squat2= [
 	"mocap":{
 		"so_older":"RTValidation_Extra/processedEMG/EXS2/squat3_processed.sto",
 		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_squat3.sto",
-		"so":"RTValidation_Extra/EXS2/squat3_processed.sto",
+		"so":"RTValidation_Extra/EXS2/emg/squat3_processed.sto",
 		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_squat3.mot",
 		"grf":"RTValidation_Extra/EXS2/ID/squat3.mot",
 	},
@@ -24,7 +24,7 @@ squat2= [
 
 		"so_older":"RTValidation_Extra/processedEMG/EXS2/squat4_processed.sto",
 		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_squat4.sto",
-		"so":"RTValidation_Extra/EXS2/squat4_processed.sto",
+		"so":"RTValidation_Extra/EXS2/emg/squat4_processed.sto",
 		"grf":"RTValidation_Extra/EXS2/ID/squat4.mot",
 		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_squat4.mot",
 	},

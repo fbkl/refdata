@@ -3,7 +3,7 @@ walking1 = [
 	"mocap":{
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_walking13.mot",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_walking13.sto",
-		"so":"RTValidation_Extra/EXS1/walking13_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/walking13_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/walking13.mot",
 		"so_older":"RTValidation_Extra/processedEMG/EXS1/walking13_processed.sto",
 
@@ -24,7 +24,7 @@ walking1 = [
 
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_walking10.mot",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_walking10.sto",
-		"so":"RTValidation_Extra/EXS1/walking10_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/walking10_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/walking10.mot",
 		"so_older":"RTValidation_Extra/processedEMG/EXS1/walking10_processed.sto",
 
@@ -46,7 +46,7 @@ walking1 = [
 
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_walking12.mot",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_walking12.sto",
-		"so":"RTValidation_Extra/EXS1/walking12_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/walking12_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/walking12.mot",
 		"so_older":"RTValidation_Extra/processedEMG/EXS1/walking12_processed.sto",
 
@@ -67,7 +67,7 @@ walking1 = [
 
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_walking11.mot",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_walking11.sto",
-		"so":"RTValidation_Extra/EXS1/walking11_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/walking11_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/walking11.mot",
 		"so_older":"RTValidation_Extra/processedEMG/EXS1/walking11_processed.sto",
 
@@ -88,7 +88,7 @@ walking1 = [
 
 		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_walking09.mot",
 		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_walking09.sto",
-		"so":"RTValidation_Extra/EXS1/walking09_processed.sto",
+		"so":"RTValidation_Extra/EXS1/emg/walking09_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/walking09.mot",
 		"so_older":"RTValidation_Extra/processedEMG/EXS1/walking9_processed.sto",
 

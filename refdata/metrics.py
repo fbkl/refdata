@@ -5,6 +5,18 @@ from scipy import signal, stats
 from scipy.spatial.transform import Rotation as R
 from . import my_log
 import traceback
+import pickle
+from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output #, Layout
+import ipywidgets as widgets
+from contextlib import nullcontext
+from .refdata import generate_action_plots_meat
+from .refdata import each_side_plot_meat
+
+try:
+    from IPython.display import display
+except ImportError:
+    display = None
+
 
 logging = my_log.logging
 logger = my_log.logger
@@ -29,20 +41,18 @@ def change_do_rename():
 trial_walking_config = {
     "walking_towards_vicon":
       {
-        "flip_axes":[True, False, False],
+        "flip_axes":[False, True, False],
         "swap_xy": True
       },
     "walking_away_from_vicon":
       {
-        "flip_axes":[False, True, False],
+        "flip_axes":[True, False, False],
         "swap_xy": True
       },
 }
 
 
 
-from ipywidgets import FloatSlider, FloatText, Button, HBox, VBox, Output, Layout
-import ipywidgets as widgets
 
 interactive = False
 
@@ -77,15 +87,16 @@ def get_roted_from_claude_because_im_stupid(df, in_degrees=False, is_mocap=False
 
 
     swap_xy= False
-
-    if initial_yaw_deg > 70: ## assume its 90 and the person is sort of weirdly pointing in the beginning
-        flip_x, flip_y, flip_z = trial_walking_config["walking_towards_vicon"]["flip_axes"]
-        if is_mocap:
-            swap_xy = trial_walking_config["walking_towards_vicon"]["swap_xy"]
-    else:
-        flip_x, flip_y, flip_z = trial_walking_config["walking_away_from_vicon"]["flip_axes"]
-        if is_mocap:
-            swap_xy = trial_walking_config["walking_away_from_vicon"]["swap_xy"]
+    flip_x = False
+    flip_y = False
+    flip_z = False
+    if is_mocap:
+        if initial_yaw_deg > 70: ## assume its 90 and the person is sort of weirdly pointing in the beginning
+            flip_x, flip_y, flip_z  = trial_walking_config["walking_towards_vicon"]["flip_axes"]
+            swap_xy                 = trial_walking_config["walking_towards_vicon"]["swap_xy"]
+        else:
+            flip_x, flip_y, flip_z  = trial_walking_config["walking_away_from_vicon"]["flip_axes"]
+            swap_xy                 = trial_walking_config["walking_away_from_vicon"]["swap_xy"]
         
     df_corrected = df.copy()
     angles = df_corrected[angle_cols].values.copy()
@@ -289,12 +300,7 @@ def parse_header(this_file):
     return skip_rows, in_degrees, is_ik
 
 def valid(maybe_df):
-    if type(maybe_df) == type(pd.DataFrame()):
-        return True
-    else:
-        return False
-
-from contextlib import nullcontext
+    return isinstance(maybe_df, pd.DataFrame)
 
 def convert_dataframe_to_radians(this_df, in_degrees, skip_columns_with_suffixes=["_tx","_ty","_tz","time"]):
     """
@@ -373,9 +379,9 @@ class SyncedTrials:
 
         self.min_size_master = None
         self.fig = None
-        if type(imu_files) == type(""):
+        if isinstance(imu_files, str):
             imu_files = [imu_files]
-        if type(mocap_files) == type(""):
+        if isinstance(mocap_files, str):
             mocap_files = [mocap_files]
 
         # the mocap pelvis has a different frame, we need to rename them :
@@ -909,7 +915,6 @@ class SyncedTrials:
 
 ## this is for this subject and this action everything, right?
 
-from .refdata import generate_action_plots_meat
 
 class Dismissed():
     """
@@ -960,12 +965,12 @@ class Dismissed():
         if gtype == "grf":
             stll = self.get_strials("grfl")
             stlr = self.get_strials("grfr")
-            if not type(conv_names) == type([]) or not len(conv_names) == 2:
+            if not isinstance(conv_names, list) or not len(conv_names) == 2:
                 logger.error("grf plotting requires different convnames for each side and you make them into a list [left, right]. that is because grf is based on the file definitions and the file definitions are weird and inconsistent, so doing this requires some flexibility here. ")
         else:
             stll = self.get_strials(gtype)
             stlr = stll
-            if not type(conv_names) == type([]) or not len(conv_names) == 2:
+            if not isinstance(conv_names, list) or not len(conv_names) == 2:
                 conv_names = [conv_names, conv_names]
 
 
@@ -1090,9 +1095,9 @@ class Dismissed():
             mocap_all = {}
             for sTiii in sTrials:
                 for joint in included_joints:
-                    if not joint in imu_all:
+                    if joint not in imu_all:
                         imu_all[joint] = []
-                    if not joint in mocap_all:
+                    if joint not in mocap_all:
                         mocap_all[joint] = []
 
                     bi = list(sTiii.get_imu_block(joint))
@@ -1109,9 +1114,11 @@ class Dismissed():
             for joint in included_joints:
                 assert(len(imu_all[joint])==len(mocap_all[joint]))
 
-            for some_modality_dic, some_modality in zip([imu_all, mocap_all],["imu","mocap"]):
-                sA = pd.DataFrame.from_dict(some_modality_dic, orient="index") ## if there are some ragged edges it will fill with NaNs, i think,,, we cross this bridge when we break some eggs
-                sA.to_csv(f"{self.save_fig_dir}/{some_modality}_{gtype}.csv", index=False )
+            this_dict_ = {"imu_all": imu_all, "mocap_all": mocap_all}
+            this_dic_filename = f"{self.save_fig_dir}/synchronized_imu_and_mocap_data_{gtype}.p"
+
+            with open(this_dic_filename, "wb") as f:
+                pickle.dump(this_dict_, f)
 
 
             # we plot the synced values (sanity check)
@@ -1204,7 +1211,6 @@ class MocapLump(Lump):
     def __repr__(self):
         return "MOCAP LUMP"+super().__repr__()
 
-from .refdata import each_side_plot_meat
 
 class SyncedLump(): ## dont get distracted. a lump is a trial 
     #with all the data from all the sources okay

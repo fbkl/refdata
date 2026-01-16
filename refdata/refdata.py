@@ -4,11 +4,13 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
-from mpl_toolkits.axes_grid1 import Divider, Size,  make_axes_locatable
+from mpl_toolkits.axes_grid1 import Divider, Size
 from importlib.metadata import version
 import os
 import traceback
-from . import graph_params
+import numpy as np
+from scipy import interpolate
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 from . import my_log
 logging = my_log.logging
 logger = my_log.logger
@@ -18,11 +20,8 @@ def check_ver(package, ver_requirements):
     ver_list = version(package).split('.')
     major = ver_list[0]
     minor = ''
-    other = ''
     if len(ver_list)>1:
         minor = ver_list[1]
-    if len(ver_list)>2:
-        other = ver_list[2:]
     if int(major)<int(ver_requirements_list[0]) or int(minor)<int(ver_requirements_list[1]):
         raise Exception(f"requirements for {package} not met need {ver_requirements}, have {'.'.join(ver_list)}")
         
@@ -37,15 +36,6 @@ def check_data(data_dir):
 
 check_data(os.path.join(os.path.dirname(__file__),"../data"))
 
-import numpy as np
-import glob
-from numpy import matlib 
-from scipy import interpolate
-from scipy import signal
-from scipy.signal import argrelextrema
-from scipy.interpolate import PchipInterpolator
-from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
-import os
 
 
 ##Setting graphing parameters
@@ -522,7 +512,7 @@ def detect_pelvis_rotation(clipped_curve,pelvis_rotation,l_r, pelvis_joint_name,
 
 def generate_action_plots(action_trials, xy_clippings_both, skip_trials,include_actions, action, **kwargs):
 
-    all_curves_for_this_person = {}
+    all_curves_for_this_person_ = {}
 
     for l_r, clips in enumerate(xy_clippings_both):
         for i_file,(file, which_clippings) in enumerate(clips.items()):
@@ -544,11 +534,18 @@ def generate_action_plots(action_trials, xy_clippings_both, skip_trials,include_
 
             data = this_trial.data
             data_time = data["time"]
-            all_curves_for_this_person.update(generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, all_curves_for_this_person, **kwargs))
+            all_curves_for_this_person_.update(generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, all_curves_for_this_person_, **kwargs))
 
-    return all_curves_for_this_person
+    return all_curves_for_this_person_
 
 def generate_action_plots_meat(l_r, i_file, data, data_time, which_clippings, all_curves_for_this_person, ref=GaitIKRefData(), conv_names=None, curve_suffix="", use_absolute_times=False, butchered_clipping=[], combine_sides=True, pelvis_plot_only_right_side=False):
+
+    if all_curves_for_this_person:
+        #import traceback
+        #print("=== WHERE AM I ===")
+        #traceback.print_stack()
+        logger.warning(f"this is fishy, but how do i look at it?: {len(all_curves_for_this_person[list(all_curves_for_this_person.keys())[0]][0])}\n{i_file}")
+
     try:
     #for i_file, file in enumerate(action_trials):
 
@@ -785,9 +782,9 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
             return some_name[:-2]
         return some_name
 
-    def plot_all_joint_or_muscles_for_person(all_curves_for_this_person, plot_ref_curves=True):
+    def plot_all_joint_or_muscles_for_person(all_curves_for_this_per_son, plot_ref_curves=True):
         
-        for name, list_of_curves in all_curves_for_this_person.items():
+        for name, list_of_curves in all_curves_for_this_per_son.items():
 
             logger.debug(f"1st loop: {name}")
             curves_combined = []
@@ -922,8 +919,8 @@ def plot_std_plots(all_curves_for_any_person, plot_std=True, plot_ref_curves=Tru
     else:
         logger.debug("all_curves_for_any_person not a dict")
     if isinstance(all_curves_for_any_person, list):
-        for all_curves_for_this_person in all_curves_for_any_person:
-            plot_all_joint_or_muscles_for_person(all_curves_for_this_person, plot_ref_curves=False)
+        for all__curves_for_this_person in all_curves_for_any_person:
+            plot_all_joint_or_muscles_for_person(all__curves_for_this_person, plot_ref_curves=False)
         nh, nl = remove_repeated(all_handles, all_labels)        
         if legend:
             fig.legend(nh, nl,loc='center left', bbox_to_anchor=(1, 0.5))#, loc='lower right')

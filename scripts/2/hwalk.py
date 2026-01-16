@@ -3,7 +3,7 @@
 
 import os, sys
 sys.path.append("../refdata")
-from refdata import analyzer
+import refdata.analyzer 
 from refdata.metrics import IMULump, MocapLump, get_roted, get_roted_from_claude_because_im_stupid
 from importlib import reload
 
@@ -19,7 +19,15 @@ get_roted_for_walking = get_roted_from_claude_because_im_stupid
 
 
 def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=None):
+
+    import matplotlib.pyplot as plt
+    plt.close('all')
+    reload(refdata.analyzer)
+
     my_log.CONTEXT = f"{subject_num} {this_action_name}"
+
+    my_log.logger.warning(action_data)
+
 
     myImuLumpList = []
     myMocapLumpList = []
@@ -41,9 +49,9 @@ def analysis_function(this_action_name, subject_num, subject_vicon_num, weight, 
     print(myImuLumpList[0])
 
     if not results_dir:
-        results_dir = analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, ext_sync = myExtSync, get_roted_fun= get_roted_fun )
+        results_dir = refdata.analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, ext_sync = myExtSync, get_roted_fun= get_roted_fun, mocap_times=True )
     else:
-        analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = results_dir, ext_sync = myExtSync, get_roted_fun=get_roted_fun)
+        refdata.analyzer.graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = results_dir, ext_sync = myExtSync, get_roted_fun=get_roted_fun, mocap_times=True)
     return results_dir
 
 
@@ -59,7 +67,9 @@ if True:
     weight= 99
 
     ###############################################################################
-    from walking1 import walking as action_data
+    from walking1 import walking1
+
+    action_data= walking1
 
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
 
@@ -71,7 +81,9 @@ if True:
     weight= 99
 
     ###############################################################################
-    from walking2 import walking as action_data
+    from walking2 import walking2
+    
+    action_data= walking2
 
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
 
@@ -83,7 +95,9 @@ if True:
     weight= 99
 
     ###############################################################################
-    from walking3 import walking as action_data
+    from walking3 import walking3
+
+    action_data = walking3
 
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
 if True:
@@ -94,7 +108,8 @@ if True:
     weight= 99
 
     ###############################################################################
-    from walking4 import walking as action_data
+    from walking4 import walking4
+    action_data  = walking4
 
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
 if True:
@@ -105,7 +120,8 @@ if True:
     weight= 99
 
     ###############################################################################
-    from walking5 import walking as action_data
+    from walking5 import walking5 
+    action_data = walking5
 
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
 
@@ -117,7 +133,8 @@ if True:
     weight= 99
 
     ###############################################################################
-    from walking6 import walking as action_data
+    from walking6 import walking6
+    action_data = walking6
 
     results_dir = analysis_function(this_action_name, subject_num, subject_vicon_num, weight, action_data, get_roted_fun=get_roted_for_walking)
 

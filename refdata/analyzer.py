@@ -2,20 +2,23 @@
 # coding: utf-8
 
 
-import os, sys
+import os
+import sys
 sys.path.append("../refdata")
 from refdata import refdata
 from refdata import metrics
 from refdata import my_log
 import numpy as np
 import matplotlib.pyplot as plt
-import glob
 import matplotlib as mpl
 import traceback
 
 from matplotlib.lines import Line2D
 from itertools import cycle
-from matplotlib.legend_handler import HandlerLine2D, HandlerTuple
+from matplotlib.legend_handler import HandlerTuple
+from refdata.metrics import header as my_print
+
+import pickle
 class HandlerMyTuple(HandlerTuple):
     
     def create_artists(self, legend, orig_handle,
@@ -67,13 +70,9 @@ class HandlerMyTuple(HandlerTuple):
 
 
 
-from refdata.my_log import vlog
 def ptupl(t):
     return f"{t[0]}x{t[1]}"
 
-from refdata.metrics import header as my_print
-
-import pickle
 
 refdata.plt.rcParams['figure.figsize'] = [12, 5]
 refdata.ROW_OF_FLOTS = 1
@@ -88,7 +87,7 @@ def make_dir(base):
     os.makedirs(path)
     return path
 
-def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None, ext_sync = [], valid_step_list_list=[], get_roted_fun=metrics.get_roted):
+def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, this_action_name, results_dir = None, ext_sync = [], valid_step_list_list=[], get_roted_fun=metrics.get_roted,mocap_times=False):
     
     plt.close('all')
     
@@ -100,6 +99,8 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
     my_log.CONTEXT = f"{subject_num} {this_action_name} {my_dir}"
 
     mySL = metrics.Dismissed(weight=weight, save_fig_dir=my_dir, action=this_action_name, get_roted_fun=get_roted_fun)
+
+    mySL.mocap_times=mocap_times
 
     refdata.logging.info(mySL.save_fig_dir)
 
@@ -141,14 +142,11 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     for mode in ["grf", "ik", "id", "so"]:
         os.makedirs(my_dir+f"/{mode}/")
-        my_print(mode)
         for i, (conv_name_i, fig_size) in enumerate(dict_of_conv_names[mode]):
-            my_print(conv_name_i)
             asRefData = [None,None]
             all_XXX_curves_for_this_person = [None, None]
             RR = [None, None]
             for j, stream in enumerate(["imu", "mocap"]):
-                my_print(stream)
                 reference_caption = f"{stream.capitalize()} {subject_num}"
                 if mode== "so"  and stream == "mocap":
                     reference_caption = f"EMG {subject_num}"
@@ -160,13 +158,14 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
                     conv_name_to_use = conv_name_i[j] ## hack because the names are different. if it still doesnt work, try changing the order in line 127,128
                 all_XXX_curves_for_this_person[j] = mySL.gen_action_plots(mode,stream, conv_names = conv_name_to_use)
 
-                curves_dictionary[mode+"_"+stream+"_"+str(i)] = all_XXX_curves_for_this_person[j]
+                pick__ = mode+"_"+stream+"_"+str(i)
+                curves_dictionary[pick__] = all_XXX_curves_for_this_person[j]
                 asRefData[j] = refdata.RefData(this_action_name)
                 for std_or_not, std_str in [(False, "all"), (True, "std")]:
-                    my_print(std_str)
+                    my_print(pick__+std_str)
                     RR[j] = refdata.plot_std_plots(all_XXX_curves_for_this_person[j], plot_std=std_or_not, ref=asRefData[j], subject_identifier=reference_caption, subplot_grid = fig_size,)
-                    plt.savefig(my_dir+f'/{mode}/sub{subject_num}_{mode}_{stream}_{this_action_name}{my_print(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
-                    refdata.plt.close()
+                    plt.savefig(my_dir+f'/{mode}/sub{subject_num}_{mode}_{stream}_{this_action_name}{ptupl(fig_size)}_tighter_{std_str}_{i}.pdf', bbox_inches = 'tight')
+                    plt.close()
                     
                 ## i dont think it makes a difference if it is std or all for the gencurves thing
                 asRefData[j].reference_curve_dict = RR[j][4]
@@ -181,9 +180,10 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
             my_print("Saving IMU + Mocap")
             plt.savefig(my_dir+f'{mode}/sub{subject_num}_{mode}_{this_action_name}_imu_mocap_ref_{ptupl(fig_size)}_all{i}.pdf', bbox_inches = 'tight')
-            refdata.plt.close()
+            plt.close()
 
         
+            del(all_XXX_curves_for_this_person)
 
 
 
@@ -272,11 +272,13 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
             if "Mocap" in ldil:
                 vi_ = (ldih)
                 break
+        em_ = None
         for ldil, ldih in ld.items():
             if "EMG" in ldil:
                 em_ = (ldih)
                 break
-        l = fig.legend([red_,blue_,vi_,em_], [r"Left $\pm$ 1 sd", r"Right $\pm$ 1 sd", r"Vicon Ref. mean $\pm$ 1 sd", "EMG Reference"], numpoints=1, handler_map={tuple: HandlerMyTuple(ndivide=None)},loc='lower center', bbox_to_anchor=(0.8, 0.1))
+        legend_l = fig.legend([red_,blue_,vi_,em_], [r"Left $\pm$ 1 sd", r"Right $\pm$ 1 sd", r"Vicon Ref. mean $\pm$ 1 sd", "EMG Reference"], numpoints=1, handler_map={tuple: HandlerMyTuple(ndivide=None)},loc='lower center', bbox_to_anchor=(0.8, 0.1))
+        print(legend_l)
     except:
         traceback.print_exc()
         refdata.logging.error("Failed to draw nice legend. You need to set the Reference colors and names correctly for this to work!")
@@ -307,4 +309,6 @@ def graphs_and_metrics( myImuLumpList, myMocapLumpList, subject_num, weight, thi
 
     my_print("all curves, sort of unformatted")
     plt.close('all')
+    del(mySL)
+    del(curves_dictionary)
     return results_dir

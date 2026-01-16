@@ -346,9 +346,10 @@ class SyncedTrials:
             return instance
 
 
-    def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False, save_fig_dir="./", mode="unknown_mode", index=-1 , get_roted_fun=None):
+    def __init__(self, imu_files, mocap_files, lag = [] , is_ik=False, save_fig_dir="./", mode="unknown_mode", index=-1 , get_roted_fun=None, mocap_times=False):
         
         self.get_roted_fun = get_roted_fun
+        self.mocap_times = mocap_times
         self.mode = mode
         self.index = index
         self.save_fig_dir=save_fig_dir
@@ -746,6 +747,14 @@ class SyncedTrials:
         valid_l = []
         valid_r = []
         suffix_length = len("_l"+self.curve_suffix )
+
+        if self.mocap_times:
+            for step_seg_list in [self.step_seg_l_list, self.step_seg_r_list]:
+                for n_ties in step_seg_list:
+                ## update the values with 
+                    n_ties[0] -= self.time_offset 
+                    n_ties[1] -= self.time_offset 
+
         for lefties in self.step_seg_l_list[:-1]:
             style = ":" if lefties[0] < self.mask_mocap[0] or lefties[1] > self.mask_mocap[1] else "-"
             for joint, ax in zip( self.common_joints, self.axs):
@@ -903,16 +912,19 @@ class Dismissed():
 
     """
 
-    def __init__(self, slumpList=[], weight=None, save_fig_dir="./", action="unknown", get_roted_fun=None):
-        self.slumpList = slumpList
+    def __init__(self, slumpList=None, weight=None, save_fig_dir="./", action="unknown", get_roted_fun=None):
+        self.slumpList = []
+        if slumpList:
+            self.slumpList = slumpList
         self.weight = weight
         self.save_fig_dir = save_fig_dir
         self.action = action
         self.get_roted_fun = get_roted_fun
+        self.mocap_times = False
 
     def set_by_two_lists_of_lumps(self, imuLs, mocapLs, extSyncLs):
         for i, (a, b, sync_Li) in enumerate(zip(imuLs, mocapLs, extSyncLs)):
-            this_SL = SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i, action= self.action, get_roted_fun= self.get_roted_fun)
+            this_SL = SyncedLump(a,b,self.weight, save_fig_dir = self.save_fig_dir, index=i, action= self.action, get_roted_fun= self.get_roted_fun, mocap_times= self.mocap_times)
             if sync_Li[0] or sync_Li[1]:
                 logger.warning("Using external segmentation for actions!!!")
                 #logging.error(this_SL.save_fig_dir)
@@ -953,7 +965,7 @@ class Dismissed():
         if gtype == "id":
             curve_suffix = "_moment"
        
-        all_curves_for_this_person = {}
+        all_curves__for_this_person = {}
 
 
         for stli, stri in zip(stll, stlr):
@@ -973,8 +985,8 @@ class Dismissed():
                 this_file_name = [stli.my_files[1],stri.my_files[1]]
 
             for l_r, (data_i, which_clippings) in enumerate(zip([stlis, stris],(stli.step_seg_l_list, stri.step_seg_r_list))):
-                all_curves_for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, all_curves_for_this_person, ref=ref, conv_names=conv_names[l_r], curve_suffix=curve_suffix, pelvis_plot_only_right_side=True, combine_sides=False))
-        return all_curves_for_this_person
+                all_curves__for_this_person.update(generate_action_plots_meat(l_r,this_file_name[l_r], data_i, data_i.index,which_clippings, all_curves__for_this_person, ref=ref, conv_names=conv_names[l_r], curve_suffix=curve_suffix, pelvis_plot_only_right_side=True, combine_sides=False))
+        return all_curves__for_this_person
 
     def get_strials(self, gtype):
         sTrialsList = []
@@ -995,6 +1007,8 @@ class Dismissed():
                 sTrialsList.append(sLumpi.grfr)
         else:
             logger.error("Unknown graph type!")
+
+        logger.warning(sTrialsList)
 
         return sTrialsList
 
@@ -1087,6 +1101,11 @@ class Dismissed():
             ##sanity check
             for joint in included_joints:
                 assert(len(imu_all[joint])==len(mocap_all[joint]))
+
+            for some_modality_dic, some_modality in zip([imu_all, mocap_all],["imu","mocap"]):
+                sA = pd.DataFrame(some_modality_dic)
+                sA.to_csv(f"{self.save_fig_dir}/{some_modality}_{gtype}.csv", index=False )
+
 
             # we plot the synced values (sanity check)
             # and compute the metrics
@@ -1182,23 +1201,24 @@ from .refdata import each_side_plot_meat
 
 class SyncedLump(): ## dont get distracted. a lump is a trial 
     #with all the data from all the sources okay
-    def __init__(self, imuLump, mocapLump, weight, save_fig_dir="./", index=-1, action="unknown", get_roted_fun= None):
+    def __init__(self, imuLump, mocapLump, weight, save_fig_dir="./", index=-1, action="unknown", get_roted_fun= None, mocap_times = False):
         self.get_roted_fun = get_roted_fun
         self.segmented = False
         self.autovalid = True
         self.weight = weight
         self.index = index
+        self.mocap_times = mocap_times
         self.save_fig_dir=save_fig_dir
         #logging.error(self.save_fig_dir)
-        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True, save_fig_dir=self.save_fig_dir, mode="ik", index=index, get_roted_fun=self.get_roted_fun) ## this will be automatically synced
+        self.ik = SyncedTrials(imuLump.ik_head, mocapLump.ik_head, is_ik=True, save_fig_dir=self.save_fig_dir, mode="ik", index=index, get_roted_fun=self.get_roted_fun  , mocap_times=self.mocap_times) ## this will be automatically synced
         self.ik.master = True
         self.action = action
         self.lag = self.ik.time_offset
-        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfl", index=index, get_roted_fun=self.get_roted_fun)
+        self.grfl = SyncedTrials(imuLump.grfl, mocapLump.grfl, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfl", index=index, get_roted_fun=self.get_roted_fun, mocap_times=self.mocap_times)
         
-        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfr", index=index, get_roted_fun=self.get_roted_fun)
-        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="id"  , index=index, get_roted_fun=self.get_roted_fun)
-        self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="so"  , index=index, get_roted_fun=self.get_roted_fun)
+        self.grfr = SyncedTrials(imuLump.grfr, mocapLump.grfr, lag = self.lag, save_fig_dir=self.save_fig_dir, mode="grfr", index=index, get_roted_fun=self.get_roted_fun, mocap_times=self.mocap_times)
+        self.id   = SyncedTrials(imuLump.id  , mocapLump.id  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="id"  , index=index, get_roted_fun=self.get_roted_fun, mocap_times=self.mocap_times)
+        self.so   = SyncedTrials(imuLump.so  , mocapLump.so  , lag = self.lag, save_fig_dir=self.save_fig_dir, mode="so"  , index=index, get_roted_fun=self.get_roted_fun, mocap_times=self.mocap_times)
         if self.action in ["walking", "gait", "running"] and self.grfl and self.grfr:
             
             self.grf_split_me()

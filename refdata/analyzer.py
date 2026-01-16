@@ -8,6 +8,7 @@ sys.path.append("../refdata")
 from refdata import refdata
 from refdata import metrics
 from refdata import my_log
+import refdata.graph_params
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl

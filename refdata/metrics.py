@@ -748,12 +748,12 @@ class SyncedTrials:
         valid_r = []
         suffix_length = len("_l"+self.curve_suffix )
 
-        if self.mocap_times:
+        if self.mocap_times and False:
             for step_seg_list in [self.step_seg_l_list, self.step_seg_r_list]:
                 for n_ties in step_seg_list:
                 ## update the values with 
-                    n_ties[0] -= self.time_offset 
-                    n_ties[1] -= self.time_offset 
+                    n_ties[0] += self.time_offset 
+                    n_ties[1] += self.time_offset 
 
         for lefties in self.step_seg_l_list[:-1]:
             style = ":" if lefties[0] < self.mask_mocap[0] or lefties[1] > self.mask_mocap[1] else "-"

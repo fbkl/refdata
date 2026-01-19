@@ -582,6 +582,9 @@ class SyncedTrials:
             # Apply the offset to one of them (let's shift mocap to match IMU timeline)
             self.mocap_resampled.index = self.mocap_resampled.index + self.time_offset
 
+        if valid(self.imu_resampled) and mode == "so": ## this is weird, but it works out. perhaps it is a sum of other delays that looks like this, but this seems to work?
+            self.imu_resampled.index = self.imu_resampled.index + self.time_offset
+
         self.all_imu_resampled = [None for i in range(len(imu_files))]
         self.all_mocap_resampled = [None for i in range(len(mocap_files))]
         

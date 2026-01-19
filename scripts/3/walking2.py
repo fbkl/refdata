@@ -3,7 +3,8 @@ walking2= [
 	"mocap":{
 		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_walking6.mot",
 		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_walking6.sto",
-		"so":"RTValidation_Extra/EXS2/emg/walking6_processed.sto",
+		"so_older":"RTValidation_Extra/EXS2/emg/walking6_processed.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS2/walking6_processed.sto",
 		"grf":"RTValidation_Extra/EXS2/ID/walking6.mot",
 	},
 	"imu":{
@@ -21,7 +22,8 @@ walking2= [
 	"mocap":{
 		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_walking12.mot",
 		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_walking12.sto",
-		"so":"RTValidation_Extra/EXS2/emg/walking12_processed.sto",
+		"so_older":"RTValidation_Extra/EXS2/emg/walking12_processed.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS2/walking12_processed.sto",
 		"grf":"RTValidation_Extra/EXS2/ID/walking12.mot",
 	},
 	"imu":{
@@ -40,7 +42,8 @@ walking2= [
 
 		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_walking14.mot",
 		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_walking14.sto",
-		"so":"RTValidation_Extra/EXS2/emg/walking14_processed.sto",
+		"so_older":"RTValidation_Extra/EXS2/emg/walking14_processed.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS2/walking14_processed.sto",
 		"grf":"RTValidation_Extra/EXS2/ID/walking14.mot",
 	},
 	"imu":{
@@ -60,7 +63,8 @@ walking2= [
 
 		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_walking7.mot",
 		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_walking7.sto",
-		"so":"RTValidation_Extra/EXS2/emg/walking7_processed.sto",
+		"so_older":"RTValidation_Extra/EXS2/emg/walking7_processed.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS2/walking7_processed.sto",
 		"grf":"RTValidation_Extra/EXS2/ID/walking7.mot",
 
 	},
@@ -81,7 +85,8 @@ walking2= [
 
 		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_walking1.mot",
 		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_walking1.sto",
-		"so":"RTValidation_Extra/EXS2/emg/walking1_processed.sto",
+		"so_older":"RTValidation_Extra/EXS2/emg/walking1_processed.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS2/walking1_processed.sto",
 		"grf":"RTValidation_Extra/EXS2/ID/walking1.mot",
 
 	},

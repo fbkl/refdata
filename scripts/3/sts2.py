@@ -1,11 +1,11 @@
 sts2=[
 {
 	"mocap":{
-		"so_older":"RTValidation_Extra/processedEMG/EXS2/sts1_processed.sto",
-		"so":"RTValidation_Extra/EXS2/emg/sts1_processed.sto",
-		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_sts1.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS2/sts1_processed.sto",
+		"so_older":"RTValidation_Extra/EXS2/emg/sts1_processed.sto",
+		"id":"RTValidation_Extra/EXS2/id_newsts1.sto",
 		"grf":"RTValidation_Extra/EXS2/ID/sts1.mot",
-		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_sts1.mot",
+		"ik":"RTValidation_Extra/EXS2/ik_newsts1.mot",
 	},
 	"imu":{
 		"grfL":"RTValidation_Extra/EX02RE/SESSION0/2024-11-22-16-45-34sts13grfLeft.sto",
@@ -22,11 +22,11 @@ sts2=[
 },
 {
 	"mocap":{
-		"so_older":"RTValidation_Extra/processedEMG/EXS2/sts2_processed.sto",
-		"so":"RTValidation_Extra/EXS2/emg/sts2_processed.sto",
-		"id":"RTValidation_Extra/EXS2/ID/IDResults/id_sts2.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS2/sts2_processed.sto",
+		"so_older":"RTValidation_Extra/EXS2/emg/sts2_processed.sto",
+		"id":"RTValidation_Extra/EXS2/id_newsts2.sto",
 		"grf":"RTValidation_Extra/EXS2/ID/sts2.mot",
-		"ik":"RTValidation_Extra/EXS2/ID/IKResults/ik_sts2.mot",
+		"ik":"RTValidation_Extra/EXS2/ik_newsts2.mot",
 	},
 	"imu":{
 		"id":"RTValidation_Extra/EX02RE/SESSION0/2024-11-22-16-46-13sts24tau.sto",

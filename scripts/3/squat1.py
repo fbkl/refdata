@@ -1,11 +1,11 @@
 squat1= [
 {
 	"mocap":{
-		"so_older":"RTValidation_Extra/processedEMG/EXS1/squat1_processed.sto",
-		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_squat1.sto",
-		"so":"RTValidation_Extra/EXS1/emg/squat1_processed.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS1/squat1_processed.sto",
+		"id":"RTValidation_Extra/EXS1/id_newsquat1.sto",
+		"so_older":"RTValidation_Extra/EXS1/emg/squat1_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/squat1.mot",
-		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_squat1.mot",
+		"ik":"RTValidation_Extra/EXS1/ik_newsquat1.mot",
 	},
 	"imu":{
 		"ik":"RTValidation_Extra/EXS1RE/SESSION0/2024-11-22-14-13-20squat19ik.sto",
@@ -24,11 +24,11 @@ squat1= [
 {
 	"mocap":{
 
-		"so_older":"RTValidation_Extra/processedEMG/EXS1/squat2_processed.sto",
-		"id":"RTValidation_Extra/EXS1/ID/IDResults/id_squat2.sto",
-		"so":"RTValidation_Extra/EXS1/emg/squat2_processed.sto",
+		"so":"RTValidation_Extra/processedEMG/EXS1/squat2_processed.sto",
+		"id":"RTValidation_Extra/EXS1/id_newsquat2.sto",
+		"so_older":"RTValidation_Extra/EXS1/emg/squat2_processed.sto",
 		"grf":"RTValidation_Extra/EXS1/ID/squat2.mot",
-		"ik":"RTValidation_Extra/EXS1/ID/IKResults/ik_squat2.mot",
+		"ik":"RTValidation_Extra/EXS1/ik_newsquat2.mot",
 	},
 	"imu":{
 		"ik":"RTValidation_Extra/EXS1RE/SESSION0/2024-11-22-14-14-06squat210ik.sto",
